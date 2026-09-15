@@ -1,0 +1,34 @@
+name: Verify Autodit
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.1'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci --prefix web
+      - run: sudo apt-get update && sudo apt-get install -y podman
+      - run: make check test-web
+      - run: make api-gen deploy-gen
+      - run: git diff --exit-code
+      - run: make test-int
+      - run: python scripts/coverage.py
+      - run: npm audit --prefix web --audit-level=moderate
+      - uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: coverage-integration.out

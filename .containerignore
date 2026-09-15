@@ -1,0 +1,11 @@
+.git
+web/node_modules
+web/dist
+dist
+secrets
+.env
+.autodit
+coverage*
+test-results
+playwright-report
+docs/specifications
