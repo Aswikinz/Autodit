@@ -1,0 +1,472 @@
+<mxfile host="app.diagrams.net" modified="2026-09-14T00:00:00.000Z" agent="architecture-blueprint" version="24.7.5" type="device">
+  <diagram id="solution-architecture" name="1. Solution Architecture">
+    <mxGraphModel dx="1600" dy="900" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="t1" value="Continuous Auditing Platform — Solution Architecture (Layered View)" style="text;html=1;align=left;verticalAlign=middle;fontSize=20;fontStyle=1;fontColor=#1F2937;" vertex="1" parent="1">
+          <mxGeometry x="40" y="16" width="900" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="t1b" value="FOSS-only stack · single-VM deployable · multi-organisation · auditor-configurable rules" style="text;html=1;align=left;verticalAlign=middle;fontSize=12;fontColor=#6B7280;" vertex="1" parent="1">
+          <mxGeometry x="40" y="44" width="900" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- BAND 1 SOURCES -->
+        <mxCell id="b1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E8EEF7;strokeColor=#4A6FA5;verticalAlign=top;align=left;" vertex="1" parent="1">
+          <mxGeometry x="40" y="76" width="1280" height="95" as="geometry" />
+        </mxCell>
+        <mxCell id="b1l" value="1. SOURCE&#10;SYSTEMS" style="text;html=1;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;fontColor=#2C4A78;" vertex="1" parent="1">
+          <mxGeometry x="55" y="104" width="145" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="b1c1" value="SAP S/4HANA &amp; ECC&#10;ACDOCA · BKPF/BSEG · CDHDR/CDPOS" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#4A6FA5;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="210" y="104" width="195" height="52" as="geometry" />
+        </mxCell>
+        <mxCell id="b1c2" value="Core Banking&#10;T24 · Finacle · Flexcube (EOD extracts)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#4A6FA5;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="423" y="104" width="195" height="52" as="geometry" />
+        </mxCell>
+        <mxCell id="b1c3" value="Data Warehouse / ODS&#10;preferred source — 70% of cases" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#4A6FA5;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="636" y="104" width="195" height="52" as="geometry" />
+        </mxCell>
+        <mxCell id="b1c4" value="Accounting SaaS&#10;NetSuite · Xero · QuickBooks · Dynamics" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#4A6FA5;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="849" y="104" width="195" height="52" as="geometry" />
+        </mxCell>
+        <mxCell id="b1c5" value="SFTP / File Drops&#10;CSV · Excel · fixed-width · long tail" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#4A6FA5;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1062" y="104" width="195" height="52" as="geometry" />
+        </mxCell>
+
+        <!-- BAND 2 INGESTION -->
+        <mxCell id="b2" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E3F2EC;strokeColor=#2E7D5B;verticalAlign=top;align=left;" vertex="1" parent="1">
+          <mxGeometry x="40" y="183" width="1280" height="95" as="geometry" />
+        </mxCell>
+        <mxCell id="b2l" value="2. INGESTION&#10;(EL)" style="text;html=1;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;fontColor=#1E5940;" vertex="1" parent="1">
+          <mxGeometry x="55" y="211" width="145" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="b2c1" value="Sling (Go, MIT)&#10;DB→DB and file loads, embedded in worker" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2E7D5B;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="210" y="211" width="195" height="52" as="geometry" />
+        </mxCell>
+        <mxCell id="b2c2" value="dlt (Python, Apache-2.0)&#10;REST / OData / SOAP gateways" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2E7D5B;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="423" y="211" width="195" height="52" as="geometry" />
+        </mxCell>
+        <mxCell id="b2c3" value="Extraction Contract&#10;versioned spec + control totals per entity" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2E7D5B;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="636" y="211" width="195" height="52" as="geometry" />
+        </mxCell>
+        <mxCell id="b2c4" value="Incremental State&#10;watermarks · resumable · COB-signal gated" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2E7D5B;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="849" y="211" width="195" height="52" as="geometry" />
+        </mxCell>
+        <mxCell id="b2c5" value="Completeness Check&#10;row counts + amount tie-out to trial balance" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#B07A2A;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1062" y="211" width="195" height="52" as="geometry" />
+        </mxCell>
+
+        <!-- BAND 3 STORAGE -->
+        <mxCell id="b3" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FDF3E3;strokeColor=#B07A2A;verticalAlign=top;align=left;" vertex="1" parent="1">
+          <mxGeometry x="40" y="290" width="1280" height="95" as="geometry" />
+        </mxCell>
+        <mxCell id="b3l" value="3. STORAGE" style="text;html=1;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;fontColor=#7A5314;" vertex="1" parent="1">
+          <mxGeometry x="55" y="318" width="145" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="b3c1" value="PostgreSQL — raw landing schema&#10;source-shaped, per-tenant" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#B07A2A;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="210" y="318" width="255" height="52" as="geometry" />
+        </mxCell>
+        <mxCell id="b3c2" value="PostgreSQL — SYSTEM OF RECORD&#10;canonical model · exceptions · dispositions · rule versions · run history · audit trail" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#B07A2A;fontSize=10;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="483" y="318" width="330" height="52" as="geometry" />
+        </mxCell>
+        <mxCell id="b3c3" value="MinIO (S3) — Parquet period snapshots&#10;immutable evidence artefact, re-executable years later" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#B07A2A;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="831" y="318" width="426" height="52" as="geometry" />
+        </mxCell>
+
+        <!-- BAND 4 TRANSFORM -->
+        <mxCell id="b4" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#EFE8F7;strokeColor=#6B4A9E;verticalAlign=top;align=left;" vertex="1" parent="1">
+          <mxGeometry x="40" y="397" width="1280" height="95" as="geometry" />
+        </mxCell>
+        <mxCell id="b4l" value="4. TRANSFORM&#10;(T)" style="text;html=1;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;fontColor=#4A3270;" vertex="1" parent="1">
+          <mxGeometry x="55" y="425" width="145" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="b4c1" value="dbt-core (Apache-2.0)&#10;raw → canonical, tested &amp; version-controlled" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#6B4A9E;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="210" y="425" width="195" height="52" as="geometry" />
+        </mxCell>
+        <mxCell id="b4c2" value="Per-tenant Mapping Config&#10;field map · code-list translation · calendars" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#6B4A9E;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="423" y="425" width="195" height="52" as="geometry" />
+        </mxCell>
+        <mxCell id="b4c3" value="CANONICAL AUDIT MODEL&#10;JournalEntry · Invoice · Payment · Vendor · Employee · Approval · AccessGrant&#10;— joins owned by vendor engineering, NOT auditor-editable —" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3ECFB;strokeColor=#6B4A9E;fontSize=10;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="636" y="425" width="621" height="52" as="geometry" />
+        </mxCell>
+
+        <!-- BAND 5 TEST EXECUTION -->
+        <mxCell id="b5" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FCE9E9;strokeColor=#A8433F;verticalAlign=top;align=left;" vertex="1" parent="1">
+          <mxGeometry x="40" y="504" width="1280" height="95" as="geometry" />
+        </mxCell>
+        <mxCell id="b5l" value="5. TEST&#10;EXECUTION" style="text;html=1;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;fontColor=#7C2F2C;" vertex="1" parent="1">
+          <mxGeometry x="55" y="532" width="145" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="b5c1" value="SET-BASED ANALYTICS&#10;DuckDB over Parquet — duplicate payments, Benford, 3-way match, SoD matrix, round-number clustering" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#A8433F;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="210" y="532" width="360" height="52" as="geometry" />
+        </mxCell>
+        <mxCell id="b5c2" value="Candidate exceptions&#10;+ computed features" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF4E5;strokeColor=#A8433F;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="588" y="532" width="160" height="52" as="geometry" />
+        </mxCell>
+        <mxCell id="b5c3" value="ROW-LEVEL DECISIONING&#10;ZEN Engine (Rust core, zen-go bindings, MIT) — JDM decision tables: flag / severity / routing, with replayable traces" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#A8433F;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="766" y="532" width="491" height="52" as="geometry" />
+        </mxCell>
+        <mxCell id="b5e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#A8433F;endArrow=block;endFill=1;" edge="1" parent="1" source="b5c1" target="b5c2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="b5e2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#A8433F;endArrow=block;endFill=1;" edge="1" parent="1" source="b5c2" target="b5c3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- BAND 6 EXCEPTION MANAGEMENT -->
+        <mxCell id="b6" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E9F4FB;strokeColor=#2E7A9E;verticalAlign=top;align=left;" vertex="1" parent="1">
+          <mxGeometry x="40" y="611" width="1280" height="95" as="geometry" />
+        </mxCell>
+        <mxCell id="b6l" value="6. EXCEPTION&#10;MANAGEMENT" style="text;html=1;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;fontColor=#1D5670;" vertex="1" parent="1">
+          <mxGeometry x="55" y="639" width="145" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="b6c1" value="Deterministic identity&#10;hash(rule · entity · period)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2E7A9E;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="210" y="639" width="195" height="52" as="geometry" />
+        </mxCell>
+        <mxCell id="b6c2" value="Run reconciliation&#10;new / still-open / resolved-in-source" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2E7A9E;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="423" y="639" width="195" height="52" as="geometry" />
+        </mxCell>
+        <mxCell id="b6c3" value="Case workflow&#10;assign · disposition · suppression w/ expiry" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2E7A9E;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="636" y="639" width="195" height="52" as="geometry" />
+        </mxCell>
+        <mxCell id="b6c4" value="Evidence chain&#10;rule ver + params + snapshot + engine ver" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2E7A9E;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="849" y="639" width="195" height="52" as="geometry" />
+        </mxCell>
+        <mxCell id="b6c5" value="Precision tracking&#10;accepted vs dismissed per rule" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2E7A9E;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1062" y="639" width="195" height="52" as="geometry" />
+        </mxCell>
+
+        <!-- BAND 7 PRESENTATION -->
+        <mxCell id="b7" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#EAF4E6;strokeColor=#4A7C3F;verticalAlign=top;align=left;" vertex="1" parent="1">
+          <mxGeometry x="40" y="718" width="1280" height="95" as="geometry" />
+        </mxCell>
+        <mxCell id="b7l" value="7. UNIFIED UI&#10;(single origin)" style="text;html=1;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;fontColor=#31552A;" vertex="1" parent="1">
+          <mxGeometry x="55" y="746" width="145" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="b7c1" value="Exception Queue&#10;the daily driver" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#4A7C3F;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="210" y="746" width="165" height="52" as="geometry" />
+        </mxCell>
+        <mxCell id="b7c2" value="Exception Detail&#10;+ ZEN trace" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#4A7C3F;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="390" y="746" width="165" height="52" as="geometry" />
+        </mxCell>
+        <mxCell id="b7c3" value="Run Monitor&#10;freshness · deadman" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#4A7C3F;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="570" y="746" width="165" height="52" as="geometry" />
+        </mxCell>
+        <mxCell id="b7c4" value="Rule Catalog&#10;+ JDM Editor (React)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#4A7C3F;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="750" y="746" width="165" height="52" as="geometry" />
+        </mxCell>
+        <mxCell id="b7c5" value="Source &amp; Mapping&#10;Console (wizard)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#4A7C3F;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="930" y="746" width="165" height="52" as="geometry" />
+        </mxCell>
+        <mxCell id="b7c6" value="Assurance Dashboard&#10;coverage · trend · aging" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#4A7C3F;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1110" y="746" width="165" height="52" as="geometry" />
+        </mxCell>
+
+        <!-- BAND 8 CROSS-CUTTING -->
+        <mxCell id="b8" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F0F0F2;strokeColor=#6B6F76;verticalAlign=top;align=left;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="825" width="1280" height="95" as="geometry" />
+        </mxCell>
+        <mxCell id="b8l" value="CROSS-CUTTING" style="text;html=1;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;fontColor=#4B4F55;" vertex="1" parent="1">
+          <mxGeometry x="55" y="853" width="145" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="b8c1" value="Zitadel&#10;OIDC/SAML, federated to client IdP" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#6B6F76;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="210" y="853" width="195" height="52" as="geometry" />
+        </mxCell>
+        <mxCell id="b8c2" value="River (Go)&#10;Postgres-backed scheduler — every run has a row" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#6B6F76;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="423" y="853" width="195" height="52" as="geometry" />
+        </mxCell>
+        <mxCell id="b8c3" value="OpenTelemetry → OpenObserve&#10;ops telemetry only (30–90d)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#6B6F76;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="636" y="853" width="195" height="52" as="geometry" />
+        </mxCell>
+        <mxCell id="b8c4" value="Immutable audit trail&#10;Postgres tables — NEVER log lines" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF4E5;strokeColor=#B07A2A;fontSize=10;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="849" y="853" width="195" height="52" as="geometry" />
+        </mxCell>
+        <mxCell id="b8c5" value="RBAC &amp; tenant isolation&#10;row-level scoping on every query" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#6B6F76;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1062" y="853" width="195" height="52" as="geometry" />
+        </mxCell>
+
+        <!-- flow arrows -->
+        <mxCell id="f1" style="edgeStyle=none;html=1;strokeColor=#374151;endArrow=block;endFill=1;strokeWidth=2;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="b1" target="b2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="f2" style="edgeStyle=none;html=1;strokeColor=#374151;endArrow=block;endFill=1;strokeWidth=2;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="b2" target="b3"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="f3" style="edgeStyle=none;html=1;strokeColor=#374151;endArrow=block;endFill=1;strokeWidth=2;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="b3" target="b4"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="f4" style="edgeStyle=none;html=1;strokeColor=#374151;endArrow=block;endFill=1;strokeWidth=2;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="b4" target="b5"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="f5" style="edgeStyle=none;html=1;strokeColor=#374151;endArrow=block;endFill=1;strokeWidth=2;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="b5" target="b6"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="f6" style="edgeStyle=none;html=1;strokeColor=#374151;endArrow=block;endFill=1;strokeWidth=2;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="b6" target="b7"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="n1" value="KEY DESIGN RULE&#10;Set-based logic (joins, population definition, duplicate detection) lives in dbt/DuckDB and is owned by vendor engineering.&#10;The rule engine only ever evaluates ONE enriched row at a time. Auditors change parameters and decision tables — never joins." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF9E6;strokeColor=#B07A2A;fontSize=11;align=left;spacingLeft=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1360" y="504" width="260" height="202" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram id="component-architecture" name="2. Component / Technical Architecture">
+    <mxGraphModel dx="1600" dy="900" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="c_t" value="Component / Technical Architecture — runtime containers and interactions" style="text;html=1;align=left;verticalAlign=middle;fontSize=20;fontStyle=1;fontColor=#1F2937;" vertex="1" parent="1">
+          <mxGeometry x="40" y="16" width="900" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="c_t2" value="5 runtime services + application. All internal services bind to the container network only — single ingress via reverse proxy." style="text;html=1;align=left;verticalAlign=middle;fontSize=12;fontColor=#6B7280;" vertex="1" parent="1">
+          <mxGeometry x="40" y="44" width="900" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="c_browser" value="Auditor / Manager Browser" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8EEF7;strokeColor=#4A6FA5;fontSize=12;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="560" y="90" width="280" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="c_proxy" value="Caddy — reverse proxy&#10;TLS termination · single origin · HSTS · security headers" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F0F0F2;strokeColor=#6B6F76;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="520" y="180" width="360" height="56" as="geometry" />
+        </mxCell>
+
+        <mxCell id="c_api" value="audit-api  (Go, single binary)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E9F4FB;strokeColor=#2E7A9E;fontSize=12;fontStyle=1;verticalAlign=top;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="400" y="280" width="600" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="c_api1" value="REST API&#10;+ RBAC / tenant scoping" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2E7A9E;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="418" y="318" width="135" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="c_api2" value="React UI&#10;served via go:embed" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2E7A9E;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="565" y="318" width="135" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="c_api3" value="ZEN Engine&#10;zen-go (cgo) evaluation" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FCE9E9;strokeColor=#A8433F;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="712" y="318" width="135" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="c_api4" value="Exception&#10;&amp; case service" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2E7A9E;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="859" y="318" width="123" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="c_api5" value="Generates Sling YAML / dlt config from stored source definitions · proxies internal service APIs so users never leave the single origin" style="text;html=1;align=left;verticalAlign=middle;fontSize=10;fontColor=#4B5563;" vertex="1" parent="1">
+          <mxGeometry x="418" y="372" width="564" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="c_worker" value="audit-worker  (same image, worker entrypoint · N replicas)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E3F2EC;strokeColor=#2E7D5B;fontSize=12;fontStyle=1;verticalAlign=top;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="80" y="500" width="600" height="190" as="geometry" />
+        </mxCell>
+        <mxCell id="c_w1" value="Sling&#10;DB + file extract" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2E7D5B;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="98" y="540" width="135" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="c_w2" value="dlt&#10;REST / OData" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2E7D5B;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="245" y="540" width="135" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="c_w3" value="dbt-core&#10;raw → canonical" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#EFE8F7;strokeColor=#6B4A9E;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="392" y="540" width="135" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="c_w4" value="DuckDB&#10;set-based analytics" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FCE9E9;strokeColor=#A8433F;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="539" y="540" width="123" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="c_w5" value="River worker pool — pulls periodic + ad-hoc jobs from Postgres. Pipeline: extract → tie-out → snapshot to Parquet → dbt → DuckDB analytics → ZEN scoring → exception reconciliation." style="text;html=1;align=left;verticalAlign=middle;fontSize=10;fontColor=#4B5563;" vertex="1" parent="1">
+          <mxGeometry x="98" y="596" width="564" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="c_w6" value="NOTE: dlt requires a Python runtime in the image — the one deviation from a pure single-binary build." style="text;html=1;align=left;verticalAlign=middle;fontSize=10;fontColor=#A8433F;fontStyle=2" vertex="1" parent="1">
+          <mxGeometry x="98" y="648" width="564" height="24" as="geometry" />
+        </mxCell>
+
+        <mxCell id="c_pg" value="PostgreSQL 16&#10;system of record · River queue&#10;raw + canonical + exceptions + audit trail" style="shape=cylinder3;boundedLbl=1;backgroundOutline=1;html=1;whiteSpace=wrap;fillColor=#FDF3E3;strokeColor=#B07A2A;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="760" y="760" width="230" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="c_minio" value="MinIO (S3)&#10;Parquet snapshots&#10;evidence &amp; attachments" style="shape=cylinder3;boundedLbl=1;backgroundOutline=1;html=1;whiteSpace=wrap;fillColor=#FDF3E3;strokeColor=#B07A2A;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1040" y="760" width="200" height="110" as="geometry" />
+        </mxCell>
+
+        <mxCell id="c_zitadel" value="Zitadel (Go)&#10;OIDC provider · SAML/OIDC federation&#10;own Postgres schema" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F0F0F2;strokeColor=#6B6F76;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="280" width="240" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="c_idp" value="Client IdP&#10;Entra ID / Okta / ADFS&#10;(external — upstream federation)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#9CA3AF;dashed=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1380" y="280" width="220" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="c_otel" value="OTel Collector&#10;OTLP receive · redact · route" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F0F0F2;strokeColor=#6B6F76;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="450" width="240" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="c_o2" value="OpenObserve&#10;logs + metrics + traces, single Go binary, built-in UI" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F0F0F2;strokeColor=#6B6F76;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="550" width="240" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="c_siem" value="Client SIEM&#10;Splunk / QRadar&#10;(external)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#9CA3AF;dashed=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1380" y="550" width="220" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="c_src" value="Source Systems&#10;SAP · core banking · DW/ODS · SFTP&#10;(external — allowlisted egress only)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#9CA3AF;dashed=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="80" y="770" width="280" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="c_jdm" value="JDM Editor (React, MIT)&#10;embedded in Rule Catalog screen · emits JDM JSON" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FCE9E9;strokeColor=#A8433F;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="120" width="240" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ce1" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#374151;endArrow=block;endFill=1;" edge="1" parent="1" source="c_browser" target="c_proxy"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ce1b" value="HTTPS 443" style="edgeLabel;html=1;fontSize=10;" vertex="1" connectable="0" parent="ce1"><mxGeometry x="0" relative="1" as="geometry" /></mxCell>
+        <mxCell id="ce2" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#374151;endArrow=block;endFill=1;" edge="1" parent="1" source="c_proxy" target="c_api"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ce3" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#374151;endArrow=block;endFill=1;dashed=1;" edge="1" parent="1" source="c_api" target="c_zitadel"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ce3b" value="OIDC" style="edgeLabel;html=1;fontSize=10;" vertex="1" connectable="0" parent="ce3"><mxGeometry x="0" relative="1" as="geometry" /></mxCell>
+        <mxCell id="ce4" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#374151;endArrow=block;endFill=1;dashed=1;" edge="1" parent="1" source="c_zitadel" target="c_idp"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ce4b" value="SAML / OIDC federation" style="edgeLabel;html=1;fontSize=10;" vertex="1" connectable="0" parent="ce4"><mxGeometry x="0" relative="1" as="geometry" /></mxCell>
+        <mxCell id="ce5" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#B07A2A;endArrow=block;endFill=1;strokeWidth=2;" edge="1" parent="1" source="c_api" target="c_pg"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ce6" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#B07A2A;endArrow=block;endFill=1;strokeWidth=2;" edge="1" parent="1" source="c_worker" target="c_pg"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ce7" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#B07A2A;endArrow=block;endFill=1;" edge="1" parent="1" source="c_worker" target="c_minio"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ce8" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#2E7D5B;endArrow=block;endFill=1;" edge="1" parent="1" source="c_worker" target="c_src"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ce8b" value="read-only extract" style="edgeLabel;html=1;fontSize=10;" vertex="1" connectable="0" parent="ce8"><mxGeometry x="0" relative="1" as="geometry" /></mxCell>
+        <mxCell id="ce9" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#6B6F76;endArrow=block;endFill=1;dashed=1;" edge="1" parent="1" source="c_api" target="c_otel"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ce10" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#6B6F76;endArrow=block;endFill=1;dashed=1;" edge="1" parent="1" source="c_worker" target="c_otel"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ce11" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#6B6F76;endArrow=block;endFill=1;" edge="1" parent="1" source="c_otel" target="c_o2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ce12" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#6B6F76;endArrow=block;endFill=1;dashed=1;" edge="1" parent="1" source="c_otel" target="c_siem"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ce12b" value="syslog / OTLP forward" style="edgeLabel;html=1;fontSize=10;" vertex="1" connectable="0" parent="ce12"><mxGeometry x="0" relative="1" as="geometry" /></mxCell>
+        <mxCell id="ce13" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#A8433F;endArrow=block;endFill=1;" edge="1" parent="1" source="c_jdm" target="c_api"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ce13b" value="JDM JSON" style="edgeLabel;html=1;fontSize=10;" vertex="1" connectable="0" parent="ce13"><mxGeometry x="0" relative="1" as="geometry" /></mxCell>
+        <mxCell id="ce14" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#2E7A9E;endArrow=block;endFill=1;dashed=1;" edge="1" parent="1" source="c_api" target="c_worker"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ce14b" value="enqueue job" style="edgeLabel;html=1;fontSize=10;" vertex="1" connectable="0" parent="ce14"><mxGeometry x="0" relative="1" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram id="deployment-architecture" name="3. Deployment Architecture">
+    <mxGraphModel dx="1600" dy="900" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="d_t" value="Deployment Architecture — single client-provided VM, air-gap capable" style="text;html=1;align=left;verticalAlign=middle;fontSize=20;fontStyle=1;fontColor=#1F2937;" vertex="1" parent="1">
+          <mxGeometry x="40" y="16" width="900" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="d_t2" value="Podman/Buildah build → signed OCI images → offline bundle → client registry → Compose on one VM. Helm/k3s path retained for scale-out." style="text;html=1;align=left;verticalAlign=middle;fontSize=12;fontColor=#6B7280;" vertex="1" parent="1">
+          <mxGeometry x="40" y="44" width="1000" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- vendor zone -->
+        <mxCell id="d_vendor" value="VENDOR BUILD &amp; RELEASE (outside client perimeter)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F5F7FA;strokeColor=#4A6FA5;verticalAlign=top;align=left;spacingLeft=10;spacingTop=6;fontSize=12;fontStyle=1;fontColor=#2C4A78;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="90" width="1560" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="d_v1" value="CI build&#10;Podman / Buildah&#10;3 images: api · worker · migrate&#10;base: debian-slim (NOT alpine — cgo/musl)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#4A6FA5;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="70" y="130" width="230" height="86" as="geometry" />
+        </mxCell>
+        <mxCell id="d_v2" value="Supply-chain artefacts&#10;cosign signatures&#10;syft SBOM (SPDX)&#10;trivy pre-scan report" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#4A6FA5;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="340" y="130" width="230" height="86" as="geometry" />
+        </mxCell>
+        <mxCell id="d_v3" value="Offline bundle&#10;skopeo copy --all --preserve-digests&#10;+ compose file / Helm chart&#10;+ dbt project + rule pack (JDM JSON)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#4A6FA5;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="610" y="130" width="250" height="86" as="geometry" />
+        </mxCell>
+        <mxCell id="d_v4" value="Physical / approved transfer&#10;no egress from client cluster · no licence phone-home · no telemetry to vendor" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF9E6;strokeColor=#B07A2A;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="900" y="130" width="250" height="86" as="geometry" />
+        </mxCell>
+        <mxCell id="d_v5" value="Versioning rule&#10;app version == chart/compose version.&#10;migrate job REFUSES to run if schema is &gt;1 minor version behind." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF9E6;strokeColor=#B07A2A;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1190" y="130" width="380" height="86" as="geometry" />
+        </mxCell>
+        <mxCell id="dv_e1" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;strokeColor=#374151;" edge="1" parent="1" source="d_v1" target="d_v2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="dv_e2" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;strokeColor=#374151;" edge="1" parent="1" source="d_v2" target="d_v3"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="dv_e3" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;strokeColor=#374151;" edge="1" parent="1" source="d_v3" target="d_v4"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- client perimeter -->
+        <mxCell id="d_client" value="CLIENT PERIMETER — all data remains inside" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FAFAFB;strokeColor=#374151;verticalAlign=top;align=left;spacingLeft=10;spacingTop=6;fontSize=13;fontStyle=1;fontColor=#1F2937;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="40" y="280" width="1560" height="790" as="geometry" />
+        </mxCell>
+
+        <mxCell id="d_reg" value="Internal registry&#10;Harbor / Artifactory&#10;images pinned by digest" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8EEF7;strokeColor=#4A6FA5;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="80" y="330" width="220" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- the VM -->
+        <mxCell id="d_vm" value="APPLICATION VM  —  client-provided  ·  RHEL 9 / Ubuntu 22.04  ·  8 vCPU / 32 GB RAM / 500 GB SSD  ·  Podman + Compose under systemd" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#EEF6FB;strokeColor=#2E7A9E;verticalAlign=top;align=left;spacingLeft=10;spacingTop=6;fontSize=12;fontStyle=1;fontColor=#1D5670;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="350" y="330" width="900" height="470" as="geometry" />
+        </mxCell>
+
+        <mxCell id="d_net" value="Container network (internal) — only caddy publishes a host port" style="text;html=1;align=left;verticalAlign=middle;fontSize=10;fontColor=#4B5563;fontStyle=2" vertex="1" parent="1">
+          <mxGeometry x="368" y="366" width="500" height="18" as="geometry" />
+        </mxCell>
+
+        <mxCell id="d_caddy" value="caddy&#10;:443 published" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#6B6F76;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="368" y="392" width="150" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="d_api" value="audit-api&#10;Go + ZEN + UI" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E9F4FB;strokeColor=#2E7A9E;fontSize=10;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="538" y="392" width="150" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="d_wrk" value="audit-worker × 2–6&#10;extract / dbt / DuckDB / score" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E3F2EC;strokeColor=#2E7D5B;fontSize=10;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="708" y="392" width="180" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="d_mig" value="migrate&#10;(run-once, pre-start)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#6B6F76;fontSize=10;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="908" y="392" width="150" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="d_zit" value="zitadel&#10;OIDC" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F0F0F2;strokeColor=#6B6F76;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1078" y="392" width="150" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="d_pg" value="postgres&#10;system of record + River queue&#10;volume: pgdata (WAL archiving on)" style="shape=cylinder3;boundedLbl=1;backgroundOutline=1;html=1;whiteSpace=wrap;fillColor=#FDF3E3;strokeColor=#B07A2A;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="380" y="480" width="230" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="d_minio" value="minio&#10;Parquet snapshots + evidence&#10;volume: objects (versioning + retention lock)" style="shape=cylinder3;boundedLbl=1;backgroundOutline=1;html=1;whiteSpace=wrap;fillColor=#FDF3E3;strokeColor=#B07A2A;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="650" y="480" width="240" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="d_obs" value="otel-collector + openobserve&#10;ops telemetry only · capped retention&#10;volume: obs (size-limited)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F0F0F2;strokeColor=#6B6F76;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="930" y="480" width="298" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="d_hard" value="HOST HARDENING &amp; CONTROLS&#10;· rootless Podman, non-root UID in container, readOnlyRootFilesystem, dropped caps, seccomp RuntimeDefault&#10;· default-deny egress; explicit allowlist per source system endpoint&#10;· secrets from host file mounts or External Secrets / Vault (optional, never mandatory)&#10;· disk quota + log retention caps so a runaway log cannot take Postgres down with the VM&#10;· LVM snapshot or pg_basebackup + MinIO mirror to the client backup target" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF9E6;strokeColor=#B07A2A;fontSize=10;align=left;spacingLeft=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="380" y="610" width="848" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="d_scale" value="SCALE PATH:  vertical (more vCPU/RAM) → worker replica count → split Postgres to a managed/HA instance → k3s + Helm chart (already built) for the rare large client" style="text;html=1;align=left;verticalAlign=middle;fontSize=10;fontColor=#1D5670;fontStyle=2" vertex="1" parent="1">
+          <mxGeometry x="380" y="752" width="848" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- source zone -->
+        <mxCell id="d_srcz" value="SOURCE SYSTEM ZONE" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F3F7F5;strokeColor=#2E7D5B;verticalAlign=top;align=left;spacingLeft=10;spacingTop=6;fontSize=11;fontStyle=1;fontColor=#1E5940;" vertex="1" parent="1">
+          <mxGeometry x="80" y="450" width="240" height="290" as="geometry" />
+        </mxCell>
+        <mxCell id="d_s1" value="SAP — CDS/OData, SLT replica,&#10;or ABAP extract to SFTP" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2E7D5B;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="96" y="486" width="208" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="d_s2" value="Core banking — EOD extract&#10;gated on COB completion signal" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2E7D5B;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="96" y="554" width="208" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="d_s3" value="Data warehouse / ODS&#10;read-only account" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2E7D5B;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="96" y="622" width="208" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="d_s4" value="SFTP drop (client-hosted)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2E7D5B;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="96" y="690" width="208" height="38" as="geometry" />
+        </mxCell>
+
+        <!-- enterprise services -->
+        <mxCell id="d_entz" value="CLIENT ENTERPRISE SERVICES" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F5F5F7;strokeColor=#6B6F76;verticalAlign=top;align=left;spacingLeft=10;spacingTop=6;fontSize=11;fontStyle=1;fontColor=#4B4F55;" vertex="1" parent="1">
+          <mxGeometry x="1290" y="330" width="280" height="410" as="geometry" />
+        </mxCell>
+        <mxCell id="d_e1" value="Entra ID / Okta / ADFS&#10;upstream IdP (SAML or OIDC)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#6B6F76;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1306" y="366" width="248" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="d_e2" value="SIEM — Splunk / QRadar&#10;syslog or OTLP forward" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#6B6F76;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1306" y="434" width="248" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="d_e3" value="Backup target&#10;pg WAL + MinIO mirror&#10;retention aligned to audit record policy" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#6B6F76;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1306" y="502" width="248" height="66" as="geometry" />
+        </mxCell>
+        <mxCell id="d_e4" value="Vault / secret store&#10;optional — file-mounted secrets supported" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#6B6F76;fontSize=10;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="1306" y="580" width="248" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="d_e5" value="SMTP relay&#10;exception alerts / deadman notices" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#6B6F76;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1306" y="648" width="248" height="56" as="geometry" />
+        </mxCell>
+
+        <mxCell id="d_users" value="Auditors · Audit Managers · CAE&#10;corporate workstations" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8EEF7;strokeColor=#4A6FA5;fontSize=11;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="620" y="850" width="320" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="d_note" value="WHY ONE VM WORKS:  typical client volume is 0.5–5 M journal lines per period. Postgres with correct indexes plus DuckDB over Parquet handles this comfortably within the stated sizing. The constraint that bites first is RAM, not CPU — Zitadel (Go, ~200 MB) rather than Keycloak (JVM, ~1 GB+) is a deliberate choice for this reason." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EEF6FB;strokeColor=#2E7A9E;fontSize=10;align=left;spacingLeft=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="80" y="830" width="500" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="d_note2" value="SINGLE POINT OF FAILURE — ACKNOWLEDGED:  one VM means no HA. Mitigation is RPO/RTO by backup and rebuild-from-bundle (target RTO &lt; 4 h), not clustering. Continuous auditing is a detective control, not a real-time transaction path, so a few hours of outage is tolerable — but this must be stated in the contract, not assumed." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FCE9E9;strokeColor=#A8433F;fontSize=10;align=left;spacingLeft=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="990" y="830" width="500" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="de1" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;strokeColor=#374151;" edge="1" parent="1" source="d_v4" target="d_reg"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="de2" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;strokeColor=#374151;" edge="1" parent="1" source="d_reg" target="d_vm"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="de2b" value="image pull (digest-pinned)" style="edgeLabel;html=1;fontSize=10;" vertex="1" connectable="0" parent="de2"><mxGeometry x="0" relative="1" as="geometry" /></mxCell>
+        <mxCell id="de3" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;strokeColor=#2E7D5B;strokeWidth=2;" edge="1" parent="1" source="d_wrk" target="d_srcz"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="de3b" value="allowlisted read-only egress" style="edgeLabel;html=1;fontSize=10;" vertex="1" connectable="0" parent="de3"><mxGeometry x="0" relative="1" as="geometry" /></mxCell>
+        <mxCell id="de4" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;strokeColor=#6B6F76;dashed=1;" edge="1" parent="1" source="d_zit" target="d_e1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="de5" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;strokeColor=#6B6F76;dashed=1;" edge="1" parent="1" source="d_obs" target="d_e2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="de6" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;strokeColor=#B07A2A;dashed=1;" edge="1" parent="1" source="d_minio" target="d_e3"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="de7" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;strokeColor=#4A6FA5;strokeWidth=2;" edge="1" parent="1" source="d_users" target="d_caddy"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="de7b" value="HTTPS 443 only" style="edgeLabel;html=1;fontSize=10;" vertex="1" connectable="0" parent="de7"><mxGeometry x="0" relative="1" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

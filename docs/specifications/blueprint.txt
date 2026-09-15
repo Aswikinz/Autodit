@@ -1,0 +1,677 @@
+﻿SOLUTION BLUEPRINT
+Continuous Auditing Platform
+A FOSS, single-VM deployable, multi-organisation continuous control monitoring and audit analytics platform
+
+Item
+Detail
+Document type
+Solution architecture blueprint and critical evaluation
+Version
+1.1 — Draft for internal review 
+ Adds sections 9.5–9.9 (platform matrix, orchestration, lifecycle, packaging) and expands 11.6
+Date
+14 September 2026
+Companion artefact
+continuous-audit-architecture.drawio 
+ Sheet 1: Solution Architecture 
+ Sheet 2: Component / Technical Architecture 
+ Sheet 3: Deployment Architecture
+Licence posture
+100% free and open source components. No commercial runtime dependency.
+Deployment target
+Single client-provided virtual machine; Kubernetes optional
+Status of estimates
+All performance figures in this document are design targets, not measured results. They require benchmarking against a representative client dataset before contractual commitment.
+
+Contents
+Press Ctrl+A then F9 in Word to populate this table of contents.
+
+
+
+1. Executive Summary
+This blueprint describes a continuous auditing platform that can be deployed repeatedly at different client organisations, each with different source systems, and operated by auditors who do not write code. It is assembled entirely from free and open source components, runs on a single virtual machine, and retains a Kubernetes path for clients who require it.
+The central architectural decision is a separation of concerns that most competing products blur:
+Set-based logic — joins, population definition, duplicate detection, statistical tests — is owned by vendor engineering and expressed in dbt and DuckDB. It is versioned, tested and never edited by end users.
+Row-level decisioning — thresholds, tolerances, severity, routing — is expressed in ZEN decision models authored by auditors in a visual editor embedded in the product UI.
+This split is what makes the no-code promise safe. A mis-specified join silently duplicates rows and fabricates exceptions with no error raised anywhere; a mis-specified threshold merely produces a wrong but visible answer. The first class of error must therefore stay under engineering control, the second can be safely devolved.
+The second decision is that the exception lifecycle, not the rule engine, is the product. Deterministic exception identity, run-to-run reconciliation, disposition with expiry, and a defensible evidence chain binding every finding to a rule version, parameter set, data snapshot and engine version are the components that determine whether auditors continue using the system after month two, and whether its output survives challenge.
+The principal residual risks are concentrated, not diffuse: a single-VM topology has no high availability; source-system access at banks is a commercial and political problem rather than a technical one; and the platform inherits a dependency on several small open source projects whose maintenance is not guaranteed. Each is addressed in section 11.
+The one sentence version
+Off-the-shelf software handles extraction, transformation, rule evaluation, identity and observability — roughly 20% of the build. The canonical audit model, the exception lifecycle and the test library are custom, and they are the entire commercial value of the product.
+2. Scope, Assumptions and Constraints
+2.1 In scope
+Scheduled, repeatable testing of full populations across financial and operational data.
+Connection to heterogeneous client source systems through a documented extraction contract.
+Auditor-configurable rule parameters and decision tables, with no code.
+Exception triage, case management, disposition and sign-off.
+Assurance reporting for audit management and the audit committee.
+Repeatable, air-gap-capable deployment into client-controlled infrastructure.
+2.2 Out of scope for the initial release
+Auditor-editable joins or free-form data modelling. Deferred by design; see section 7.4.
+Real-time or event-driven control monitoring. The platform is batch and detective, not preventive.
+Working-paper management, audit planning and engagement scheduling. These are adjacent products.
+Statistical sampling workflows, beyond providing the population from which samples are drawn.
+2.3 Assumptions
+Client provides one virtual machine of at least 8 vCPU, 32 GB RAM and 500 GB SSD, on a supported Linux distribution with a container runtime permitted.
+Typical client volume is 0.5 to 5 million journal lines per period. Volumes materially above this change the storage and scaling assumptions.
+Direct production database access will generally be refused. Extract-based integration is the default assumption, not the fallback.
+Clients operate an identity provider supporting SAML or OIDC federation.
+2.4 Constraints
+No component may require a commercial licence, a licence key server, or outbound connectivity to the vendor at runtime.
+No client data may leave the client perimeter.
+All user-facing functionality must be reachable from a single origin and a single sign-in.
+3. Solution Overview
+The platform is organised as seven layers with two cross-cutting concerns. This corresponds to Sheet 1 of the accompanying draw.io file.
+Layer
+Responsibility
+Principal technology
+1. Source systems
+Client-owned systems of record
+SAP, core banking, data warehouse, SaaS accounting, file drops
+2. Ingestion
+Extract and load, incrementally, with completeness proof
+Sling, dlt, extraction contract
+3. Storage
+Durable state and immutable evidence
+PostgreSQL, MinIO (Parquet)
+4. Transformation
+Map heterogeneous sources to one canonical model
+dbt-core, per-tenant mapping config
+5. Test execution
+Generate and score exceptions
+DuckDB (set-based), ZEN Engine (row-level)
+6. Exception management
+Identity, reconciliation, workflow, evidence chain
+Custom Go services over PostgreSQL
+7. Presentation
+One UI, one login, six screens
+React, TanStack, embedded JDM Editor
+Cross-cutting: identity
+Authentication, federation, RBAC, tenant isolation
+Zitadel
+Cross-cutting: observability
+Ops telemetry, separate from the audit trail
+OpenTelemetry, OpenObserve
+
+The canonical audit model is the spine. It comprises seven entities — JournalEntry, Invoice, Payment, Vendor, Employee, Approval and AccessGrant — plus their supporting dimensions. Every test, every rule and every screen binds to this model and never to a client schema. Onboarding a new organisation is therefore a mapping exercise, not a redevelopment exercise, and the test library remains portable across the entire client base.
+4. Architecture
+4.1 Runtime components
+Five runtime services plus the application, built from three container images produced from a single Go codebase. This corresponds to Sheet 2.
+Container
+Contents
+Notes
+caddy
+Reverse proxy, TLS termination
+The only container publishing a host port
+audit-api
+Go API, embedded React UI, embedded ZEN engine, RBAC, exception and case services
+Single binary; UI served via go:embed so there is no separate web server
+audit-worker
+Same image, worker entrypoint. Sling, dlt, dbt-core, DuckDB, River worker pool
+Horizontally scalable by replica count
+migrate
+Same image, migration entrypoint
+Run-once before start; refuses to run against a schema more than one minor version behind
+postgres
+System of record and job queue
+Canonical model, exceptions, dispositions, rule versions, run history, audit trail
+minio
+Object storage
+Parquet period snapshots, evidence attachments
+zitadel
+Identity provider
+OIDC to the application, SAML or OIDC federation upstream
+otel-collector + openobserve
+Operational telemetry
+Capped retention; forwards to client SIEM
+
+4.2 Pipeline
+A run proceeds through seven stages, each of which writes a row to run history and can be independently retried:
+Extract — Sling or dlt pulls incrementally from the source, gated on a completion signal where one exists (for example core banking end-of-day).
+Tie-out — record counts and amount totals are reconciled to a control figure such as the trial balance. Failure halts the run; a test executed over an incomplete population is worse than no test, because it produces a false assurance.
+Snapshot — the tied-out population is frozen to Parquet in MinIO. This artefact is the evidence.
+Transform — dbt maps raw to canonical using the tenant's mapping configuration.
+Analyse — DuckDB executes set-based tests over the Parquet snapshot, emitting candidate exceptions enriched with computed features.
+Score — each candidate is evaluated by the ZEN engine against the applicable decision model, yielding flag, severity and routing, plus a replayable trace.
+Reconcile — exceptions are matched against the prior run by deterministic identity and classified as new, still open, or resolved in source.
+4.3 Why the rule engine never sees more than one row
+The ZEN engine evaluates a single enriched record at a time. Pairing a purchase order with an invoice, detecting duplicate payments across millions of rows, or computing a Benford distribution are all set operations and belong upstream in SQL. By the time a record reaches the decision model it already carries every derived value the rule needs — the variance, the days elapsed, the count of prior occurrences — and the decision table asks only whether those values breach tolerance and how severely.
+This keeps decision models small enough for an auditor to read and reason about, keeps evaluation fast, and confines the class of error that produces silent data corruption to code that is version-controlled and tested.
+
+5. FOSS Component Inventory and Selection Rationale
+Every runtime component is free and open source. Licences are permissive throughout; there is no copyleft obligation that would affect distribution of the platform, and no component requires a licence key or vendor callback.
+Component
+Licence
+Role
+Why selected, and what was rejected
+Go
+BSD-3
+Application language for API and workers
+Single static binary, low memory footprint, strong concurrency for parallel extraction. Rejected: JVM stack (memory cost on a single VM), Python (deployment and performance).
+ZEN Engine (zen-go)
+MIT
+Rule evaluation
+Rust core with Go bindings, in-process so no network hop per evaluation, replayable traces, portable JDM JSON. Rejected: GoRules BRMS — its self-hosted licence is non-transferable and non-sublicensable, which conflicts with embedding it in client deployments. Rejected: Drools (JVM weight), OPA/Rego (poor fit for business users).
+JDM Editor
+MIT
+Visual rule authoring
+React component embeddable directly in our UI, so authoring stays inside a single origin and design system. This is the component that makes the no-code requirement achievable without building a rule editor from scratch.
+PostgreSQL
+PostgreSQL Licence
+System of record and job queue
+Transactional integrity for audit evidence, mature backup and PITR, universally accepted in bank security reviews. Rejected: DuckDB as system of record — single-writer embedded file, no concurrency or replication, unsuitable for evidence.
+DuckDB
+MIT
+Set-based analytics engine
+Columnar and vectorised; materially faster than row-store Postgres on full-population scans, and each run can use an isolated file with no contention. Introduced only when measured volumes justify a second SQL dialect.
+Apache Parquet
+Apache-2.0
+Snapshot and evidence format
+Columnar, compressed, portable, and readable by any tool in ten years' time. The snapshot doubles as the immutable evidence artefact.
+MinIO
+AGPL-3.0
+S3-compatible object storage
+Used as an unmodified network service; interaction is over the S3 API so the AGPL obligation is not triggered by our application code. Retains the option to point at the client's existing S3 or NAS instead. See section 11.7.
+Sling
+MIT
+Database and file extraction
+Single Go binary, embeds cleanly into our image, handles incremental watermarks and schema drift. Rejected: Airbyte — heavy for one VM, and air-gapped installs require pulling dozens of connector images into the client registry.
+dlt
+Apache-2.0
+REST, OData and API extraction
+Declarative REST source configuration with pagination, auth, retry and state handled. This is where SAP OData and SaaS accounting APIs are served. Cost: introduces a Python runtime into the worker image.
+dbt-core
+Apache-2.0
+Raw to canonical transformation
+Versioned, testable, lineage-aware transformation with a large practitioner pool. Keeps mapping logic declarative rather than thousands of lines of bespoke Go.
+River
+MPL-2.0
+Job scheduling and queueing
+Postgres-backed, so every scheduled run leaves an auditable row explaining why it fired and what it produced. Rejected: Kubernetes CronJob — leaves no audit trail, and 'prove this control ran every day in Q3' is a question that will be asked.
+Zitadel
+Apache-2.0
+Identity provider
+Go binary, roughly 200 MB resident and seconds to start, versus a JVM footprint of a gigabyte or more. On a VM already running Postgres, DuckDB scans and workers, that headroom is material. Keycloak remains a documented, swappable alternative for clients who insist on it — the application speaks only standard OIDC.
+React, TanStack Table/Query, shadcn/ui
+MIT
+Unified user interface
+Virtualised tables for long exception queues, server-driven filtering and pagination, and a component set that can be themed to a single coherent design.
+OpenTelemetry
+Apache-2.0
+Instrumentation
+Vendor-neutral, so the telemetry backend is a configuration choice rather than an architectural commitment.
+OpenObserve
+AGPL-3.0
+Telemetry backend
+Single Go binary ingesting logs, metrics and traces with a built-in UI, replacing a four-service Prometheus/Loki/Tempo/Grafana stack. Alternative: VictoriaMetrics with VictoriaLogs.
+Caddy
+Apache-2.0
+Reverse proxy and TLS
+Automatic certificate handling, minimal configuration, sensible security defaults.
+Podman / Buildah / skopeo / cosign / syft / trivy
+Apache-2.0
+Build, signing and supply chain
+Rootless builds, image signing, SBOM generation and pre-scanning. Having these artefacts ready shortens bank security review materially.
+
+5.1 Components deliberately not used
+GoRules BRMS. Strong governance features, but self-hosted deployment requires a licence key obtained per environment from the vendor portal, and the terms grant a non-transferable, non-sublicensable licence for the licensee's own business purposes. Distributing it inside our product to each client is redistribution and would require an OEM agreement. The open-source ZEN engine carries no such constraint, so the governance features are rebuilt — realistically a few months of work, most of which overlaps with the exception workflow we must build anyway.
+Airbyte. Its connector catalogue is the largest available, but it is aimed at SaaS APIs, and our sources are databases and files. The operational cost on a single VM is not repaid.
+Kubernetes as the baseline. Retained as an option, rejected as a default. The delivery target is a VM; making k8s mandatory adds an operational burden the client must carry.
+Grafana stack. Four additional services on a constrained host to solve a problem one binary solves.
+Alpine base images. zen-go is a cgo binding without musl support; Alpine fails at link or run time.
+
+6. Data Integration
+6.1 The extraction contract
+Per-client integration is the largest cost driver and the greatest threat to scaling the business. The mitigation is a published, versioned extraction contract: a documented specification per canonical entity, defining required fields, types, granularity, incremental key and accompanying control totals. The client's own IT fulfils it by whatever means suits their estate, and the platform validates conformance on arrival.
+This converts integration from a bespoke engineering project into a conformance check, and it places the tie-out obligation where the evidence lives. Without record-count and amount reconciliation to an independent control figure, findings are not defensible, because completeness of the tested population cannot be demonstrated.
+6.2 SAP
+Production database access should not be assumed. Three viable paths, in the order they are typically obtainable:
+Scheduled ABAP extracts written to SFTP. Unsophisticated, but frequently the only option that clears security review quickly.
+CDS views exposed over OData on S/4HANA. The sanctioned modern interface where the client has migrated.
+SLT replication or a HANA read replica. Best data quality, longest procurement cycle.
+Relevant objects include ACDOCA on S/4HANA (the universal journal, and the single richest source), BKPF and BSEG on ECC, LFA1 and LFB1 for vendors, EKKO and EKPO for purchase orders, RBKP and RSEG for invoice receipts, and CDHDR with CDPOS for change documents. Change documents are disproportionately valuable in audit because they capture master-data modifications such as vendor bank-detail changes.
+Two commercial risks to raise in week one, in writing
+SAP indirect or digital access licensing can be triggered by third-party tools reading SAP data, and direct database access outside sanctioned interfaces can affect support status. Both are the client's exposure, not ours, but discovering them at go-live destroys the engagement. They must be raised with the client's SAP team and documented before build.
+6.3 Core banking
+Assume no production access under any circumstances. Realistic sources are the existing data warehouse or operational data store, which most banks already maintain and which bypasses the core banking team entirely, or end-of-day batch extracts.
+Extraction must be gated on the end-of-day completion signal rather than a clock. Running against a partially completed close produces findings from inconsistent data, which is more damaging than producing none.
+Incremental extraction is mandatory at bank volumes.
+Back-dated and reversed entries will arrive after a period has already been tested. Reconciliation logic must tolerate a prior period changing beneath it, and the evidence chain must record which snapshot a finding was drawn from.
+T24 and similar platforms store multivalue and subvalue nested fields inherited from their jBASE lineage. Flattening to a relational shape is genuine work even once access is granted.
+6.4 Source configuration by non-technical staff
+Neither Sling nor dlt provides an end-user interface; both configure through YAML and code. The configuration UI is therefore custom, but it is a form over a schema we control rather than a general-purpose connector builder.
+A source definition is stored in PostgreSQL — type, connection parameters, credential references, entity mappings — and the corresponding Sling or dlt configuration is generated at run time. The user never encounters YAML. The functionality that carries the experience is connection testing and schema discovery: enumerate the source's tables and columns, present them in a picker, pre-fill mappings by name similarity, profile a sample for nulls, cardinality and date ranges, and preview transformed rows before committing.
+REST sources resist generic treatment, so they ship as named templates — SAP OData, NetSuite, Xero — into which the user supplies only credentials and a base endpoint. A YAML escape hatch is retained for the implementation team so that an unusual source never blocks a deal pending a UI release.
+7. Rule Authoring and Execution
+7.1 Where rules are written
+Rules are authored in the JDM Editor embedded in the Rule Catalog screen. The editor emits JDM JSON, which is stored in PostgreSQL and executed by the ZEN engine inside the API process at run time. No authoring occurs in the engine itself; the engine only evaluates.
+7.2 Two audiences, two surfaces
+Staff auditors should not be handed a raw decision graph canvas. The default authoring surface is a guided builder over the canonical model — select entity, select conditions, set thresholds — which generates JDM beneath. The full graph canvas is exposed only to internal rule engineers building the shipped test packs, and to advanced client users who request it.
+7.3 Parameterise, never fork
+One rule pack is maintained and versioned centrally. Client-specific differences — materiality, approval limits, fiscal calendar, account groupings, segregation-of-duties conflict matrices — are stored as tenant parameters and supplied as inputs to the decision. Forking a decision model per client produces divergent copies with no upgrade path and is prohibited by design.
+7.4 Governance rebuilt in place of BRMS
+Capability
+Approach
+Effort
+Versioning and release
+JDM is JSON. Store versions in PostgreSQL, hash them, bundle a release as an immutable artefact.
+Low
+Test and simulate
+Evaluate a stored fixture set against a draft, display the trace, block release on failure.
+Low
+Approvals and audit log
+Largely the same CRUD and workflow primitives required for exception case management.
+Moderate
+Decision table diffing
+Naive JSON diff is unreadable. Row-level diff keyed on a stable row identifier is required.
+Moderate
+Concurrent editing
+Explicitly out of scope. Optimistic locking or explicit checkout per decision model.
+Avoided
+
+7.5 The deferred capability
+Allowing auditors to edit joins and table relationships through the UI has been assessed and deferred. An incorrect join silently multiplies rows and generates exceptions that do not exist, with no error surfaced anywhere in the system. If the capability is revisited, the safe form is a guided builder restricted to pre-declared, pre-tested relationships, so that users select from known-good paths rather than composing joins freely. New cross-entity analysis is, in the interim, a request into the vendor engineering team and ships as a library test from which every client benefits.
+8. User Interface
+The primary surface is a work queue, not a chart dashboard. Charts are secondary reporting for audit leadership. Screens, ordered by expected use:
+Screen
+Purpose
+Critical design requirement
+Exception Queue
+Daily triage
+Server-side filter, sort and pagination over potentially millions of rows; saved views per auditor; bulk disposition; grouping so forty flags against one vendor collapse into one case
+Exception Detail
+Investigation and disposition
+Source record, rule fired, ZEN trace showing which condition matched, related records, comments, evidence attachment
+Run Monitor
+Operational assurance
+Data freshness per source, extracts landed, tests errored versus tests passed with zero findings
+Rule Catalog
+Test library management
+Per-tenant parameters, enable/disable, last run, exception rate, precision; embedded JDM Editor
+Source & Mapping Console
+Onboarding
+Connection test, schema discovery, mapping, profiling, preview
+Assurance Dashboard
+Audit committee reporting
+Population coverage by process, exception rate trend, aging of open items, disposition mix
+
+8.1 Two mechanisms that determine adoption
+Stable exception identity. A deterministic key per finding — rule identifier, entity identifier and period, hashed — allows each run to reconcile against the last and classify findings as new, still open, or resolved in source. Without it, every exception an auditor dismissed reappears the following day and the tool is abandoned within weeks. Dispositions carry a suppression expiry and re-flag if the underlying record changes.
+Precision as a first-class metric. Accepted versus dismissed counts are tracked per rule and surfaced in the catalog. A test running at three percent precision is noise; it must be visibly flagged for tuning rather than quietly generating four hundred items a month.
+8.2 Unified origin
+Nothing other than the application is exposed. Zitadel, MinIO and the telemetry backend bind to the container network only; the API proxies their endpoints and renders their state within our own screens. Users see one origin, one sign-in and one design language, and the client's security review has a single ingress to assess.
+Where auditors require free-form data exploration, the answer is a read-only connection for a BI tool such as Metabase against the canonical model, not an ad-hoc query builder inside the product.
+
+9. Deployment Model
+Images are built with Podman and Buildah, signed with cosign, accompanied by a syft SBOM and a trivy scan report, and transferred as an offline bundle produced with skopeo. The client loads them into their own registry, and the stack runs under Compose managed by systemd on a single VM. This corresponds to Sheet 3.
+9.1 Air-gap posture
+No egress from the application host is assumed, and none is required at run time.
+No licence key check, no telemetry to the vendor, no callback of any kind. The choice of ZEN over a licence-keyed BRMS is what makes this achievable.
+Images are pinned by digest rather than tag.
+The signature, SBOM and scan report are supplied as standard release artefacts; having them ready shortens bank security review materially.
+9.2 Hardening
+Rootless Podman, non-root user inside the container, read-only root filesystem, dropped capabilities, seccomp default profile.
+Default-deny egress with an explicit allowlist per source-system endpoint. Shipping this by default pre-empts the hardest question in the security review.
+Secrets supplied by mounted files, with optional External Secrets or Vault integration. Vault is never a prerequisite.
+Explicit disk quotas and log retention caps, so that a runaway log cannot exhaust the volume and take PostgreSQL down with it. On client-owned infrastructure there may be no alerting before it does.
+9.3 Scale path
+Vertical scaling first, then worker replica count, then separation of PostgreSQL onto a dedicated or highly available instance, and finally k3s with the Helm chart that is maintained alongside the Compose file. The chart is built and tested from the outset so that a client requiring Kubernetes is a configuration decision rather than a re-platforming project.
+9.4 Upgrade discipline
+Application version and chart or compose version are identical, so a client can state precisely what they are running. The migration job refuses to execute against a schema more than one minor version behind. Clients defer upgrades for a year and then attempt to jump four versions; that must fail loudly rather than half-migrate a database holding audit evidence.
+9.5 Supported platform matrix
+The platform does not target operating systems; it targets a container runtime. Images are OCI-standard and therefore execute identically under Docker, Podman, containerd or Kubernetes. The matrix below is deliberately narrow enough to be tested in CI and honoured in a contract.
+Dimension
+Supported
+Position
+Operating system
+Linux, any distribution with a supported runtime
+Tested in CI on RHEL 9 and Ubuntu 22.04 / 24.04. Other distributions best-effort.
+CPU architecture
+amd64 and arm64
+Multi-architecture images built from the first release. This is the only genuine portability constraint; retrofitting it after the cgo and Python dependencies are in place is materially harder.
+Container runtime
+Docker Engine 24+, Podman 4.4+
+Podman below 4.4 lacks Quadlet and a usable compose implementation. Ubuntu 22.04 ships 3.4, so the installer must check and, where necessary, direct the client to a newer package.
+Windows and macOS
+Developer workstations only, via Docker Desktop
+Not a server target. A client requesting Windows Server hosting is directed to a Linux VM or WSL2. This is normal for containerised server software and is not a competitive weakness.
+Orchestration
+Compose (default), Quadlet (optional), Helm / k3s (scale-out)
+Same images and environment file throughout; only the orchestration wrapper differs.
+
+9.6 Orchestration options
+Compose is the shipped default because it is the only orchestration format that works across every supported runtime from a single file. Two alternatives are maintained alongside it.
+Mechanism
+When used
+Trade-off
+Compose
+Default for all client deployments
+Portable across Docker and Podman on any host; no systemd integration, and worker scaling is static
+Quadlet (Podman 4.4+)
+Optional overlay for Linux clients whose operations teams standardise on systemd
+Native systemd units, journald logging, dependency ordering through standard directives; systemd-only, so it cannot be the default
+Helm on k3s
+Clients requiring high availability or dynamic worker scaling
+Full orchestration, at the cost of an operational burden the client must carry
+
+A single deployment manifest covering both the single-VM and Kubernetes cases should be prototyped using Podman's ability to run a Kubernetes manifest locally as a pod, before Quadlet is committed to as the Linux-native path.
+9.7 Lifecycle mechanics
+A stack that starts with one command is straightforward; a stack that starts correctly, and stops without damage, is not. Three behaviours must be explicitly engineered rather than assumed.
+Start ordering. Dependency conditions gate each stage: the migration job waits for PostgreSQL to report healthy, and the API and workers wait for the migration job to complete successfully. Without this the API starts against an unmigrated schema and either fails outright or, more dangerously, partially functions. Zitadel runs its own migrations on first boot and requires the same treatment.
+Meaningful health probes. Dependency conditions are only as reliable as the probes beneath them. The application health endpoint must verify a live database connection rather than returning success unconditionally.
+Graceful shutdown. Container runtimes terminate after a short grace period by default. A worker interrupted mid-extract leaves orphaned jobs and partially written Parquet files. Workers are given an extended stop grace period and handle termination signals by ceasing job intake, completing in-flight work, then exiting.
+Supporting configuration: automatic restart policies on long-running services, named volumes for database, object storage and telemetry data, optional service profiles so a client using their own PostgreSQL or identity provider can disable those containers from the same file, and a systemd unit wrapping the stack so it survives a host reboot without manual intervention.
+9.8 Distribution bundle
+The unit of delivery is a single signed archive. The client copies one file to the host and runs one script.
+Contents
+Purpose
+images/
+All platform images in a portable directory format, loadable into the local store or the client's registry
+compose.yaml, quadlet/, chart/
+The three orchestration options, generated from one source of truth
+.env.example
+Every configurable parameter, documented, with safe defaults
+rulepack/, dbt/
+Versioned test library as JDM JSON, and the transformation project
+install.sh, upgrade.sh, verify.sh, support-bundle.sh
+Lifecycle scripts; see 9.9
+checksums.txt, sbom.spdx.json, signatures/, cosign.pub
+Supply-chain artefacts for security review and offline verification
+docs/
+Runbook, network requirements, pre-completed security questionnaire responses
+
+9.9 Lifecycle scripts
+Four scripts, deliberately separated. Each is idempotent, so a failed run is re-run rather than unpicked.
+Script
+Responsibility
+Design note
+preflight (mode of install.sh)
+Environment validation with no side effects: runtime version, kernel, architecture, disk, memory, free ports, registry reachability, rootless prerequisites
+Sent to the client's infrastructure team ahead of the engagement. Finding the blocked registry or missing disk space before a deployment day is booked is the single highest-value item in this section.
+install.sh
+First-time installation: load images, generate secrets, render environment file, run migrations, start, wait for health, print URL and initial administrator credential
+Must never silently upgrade an existing installation
+upgrade.sh
+Version upgrade: back up PostgreSQL, verify the version gap is permitted, stop workers, migrate, restart, verify health
+Kept strictly separate from install. An installer that quietly upgrades is how audit evidence is lost
+verify.sh
+Validate checksums and image signatures against the bundled public key
+Required by security review, and usable entirely offline
+support-bundle.sh
+Collect logs, versions, configuration and health output into a redacted archive
+On an air-gapped host with no vendor remote access, this is the only diagnostic channel that exists
+
+9.9.1 Rootless Podman prerequisites
+Where the client mandates rootless operation, four conditions must be validated by preflight. Each fails in a way that is confusing rather than obvious.
+Lingering must be enabled for the service account, or the entire stack terminates when that account's session ends.
+Rootless containers cannot bind privileged ports. Either the unprivileged port range is lowered by sysctl, or the proxy binds a high port and a host-level listener forwards to it. The sysctl approach is cleaner and straightforward to justify in review.
+Subordinate user and group ID ranges must exist for the service account. Hardened golden images frequently omit them.
+Container storage sits under the service account's home directory, which must be located on the large data volume rather than a small root partition.
+9.9.2 Installer implementation
+The initial implementation is shell, because the flow will be revised several times before it settles. Once stable, a single Go binary embedding the orchestration files and driving the container runtime directly is preferable: the same user experience, without portability differences between distributions' shell environments, and consistent with the rest of the codebase.
+10. Observability and the Audit Trail
+These are two separate systems and must not share a pipeline.
+
+Operational telemetry
+Audit trail
+Purpose
+Latency, errors, queue depth, resource use
+Evidence: who dismissed which exception, what parameters a run used, which rule version fired
+Store
+OpenObserve via OpenTelemetry
+PostgreSQL tables with foreign keys
+Retention
+30 to 90 days, capped by size
+Years, aligned to the client's audit record retention policy
+Loss tolerance
+Acceptable
+None. Must survive a full disk, a retention policy and an upgrade
+
+10.1 Rules that apply specifically here
+Never log financial data or personal data. Log the journal entry identifier, not the amount, vendor name or account number. Client security teams will inspect logs during review, and a payment amount in a debug line is a finding against the platform.
+Instrument domain metrics, not only system metrics. Extract freshness per source, rows processed, run duration, exceptions created, dismissal rate per rule. These are what alerts are built on.
+Alert on silence. A test that has stopped running is indistinguishable from a clean control. Deadman alerting on expected run completion is the single most important alert in the system.
+Trace whole runs. One trace spanning extract, transform, test and exception creation, carrying the run identifier as a span attribute. Sample failures at one hundred percent, successes lightly.
+Export to the client SIEM. Syslog or OTLP forwarding from the collector, with a documented log schema. This will be requested during security review.
+
+11. Critical Evaluation
+This section assesses the design against six quality attributes. It is written to expose weaknesses rather than to justify decisions already taken.
+Attribute
+Assessment
+Principal residual risk
+Security
+Strong
+Broad read access to financial data concentrated on one host makes the platform itself a high-value target
+Reliability
+Adequate, with a known gap
+Single VM, therefore no high availability. Recovery is by restore and rebuild
+Scalability
+Good within stated assumptions
+Vertical ceiling reached at roughly an order of magnitude above assumed volumes
+Performance
+Expected to be good, unproven
+All figures are design targets; no benchmark has been run against representative data
+Interoperability
+Strong
+Source-side integration remains a political rather than technical constraint
+Portability
+Very strong
+One cgo dependency and one Python dependency constrain the build
+11.1 Security
+Strengths
+No data leaves the client perimeter, and no runtime egress to the vendor is required. This removes the objection that ends most audit-tool procurements at banks.
+Single ingress through a reverse proxy; all other services bind to the container network. One surface to assess and one to defend.
+Identity federated to the client's own provider, so joiner-mover-leaver processes and MFA policy are inherited rather than reimplemented.
+Supply-chain artefacts — signatures, SBOM, scan reports — supplied as standard, with images pinned by digest.
+Default-deny egress shipped by default, with an explicit allowlist per source endpoint.
+Weaknesses and residual risk
+Concentration of privilege. The platform holds read access to the general ledger, accounts payable, payroll and vendor master data across the organisation. It is, by construction, one of the most attractive targets in the estate. Compromise of this single VM is equivalent to compromise of a broad slice of the client's financial data.
+Credential custody. Source-system credentials are stored by the platform. File-mounted secrets are adequate but weaker than a managed secret store, and Vault integration is optional rather than mandatory.
+Insider risk on the audit trail. Storing evidence in PostgreSQL means a database administrator can in principle alter it. Append-only tables and triggers raise the bar but do not eliminate the exposure.
+Data leakage through telemetry. The prohibition on logging financial values is a discipline, not an enforced control. A single careless debug statement violates it.
+MinIO under AGPL. Used unmodified over the S3 API, the obligation is not triggered by our code, but the licence will attract legal scrutiny at enterprise clients and requires a prepared position.
+Mitigations
+Least-privilege, read-only source accounts, scoped to the specific objects named in the extraction contract.
+Append-only audit tables with database triggers preventing update and delete; periodic hash-chaining of audit records so tampering is detectable.
+Redaction processors configured in the OpenTelemetry collector as a second line of defence behind the logging discipline, plus a CI check for prohibited field names in log statements.
+Retain the option to use the client's existing S3-compatible storage instead of MinIO, removing the AGPL question entirely where it is contested.
+Annual third-party penetration test, with the report made available to clients under NDA.
+11.2 Reliability
+Strengths
+Every pipeline stage is idempotent and independently retryable, with state in PostgreSQL rather than in memory.
+River persists the job queue in the same transactional store as the data, so a scheduled run cannot be lost without the database being lost.
+Tie-out gating halts a run on incomplete data rather than producing findings from a partial population.
+Parquet snapshots make any historical run reproducible, so recovery from a logic error does not require re-extraction from the source.
+Weaknesses and residual risk
+No high availability. A single VM is a single point of failure for the application, the database and the object store simultaneously. This is a deliberate trade for deployability, but it is a real limitation and must be stated contractually rather than assumed away.
+Backup depends on the client. Evidence retention obligations run for years, and the platform relies on the client's backup infrastructure to meet them. A client whose backups silently fail loses audit evidence.
+Upstream fragility. Source extracts depend on client-side jobs the platform does not control. An ABAP extract that stops running, or an end-of-day signal that never arrives, presents as missing data.
+Dependency maintenance risk. Sling, dlt, River, ZEN and OpenObserve are smaller projects than PostgreSQL or React. Abandonment of any one is plausible over a five-year horizon.
+Mitigations
+Recovery by restore and rebuild from the offline bundle, with a target recovery time under four hours. Continuous auditing is a detective control, not a transaction path, so hours of outage are tolerable — provided the expectation is contractual.
+Deadman alerting on expected run completion, escalating to both the client's audit team and the vendor support contact.
+Backup verification as a scheduled, monitored job that performs an actual restore test, not merely a backup job that reports success.
+Each replaceable dependency confined behind an internal interface, so substitution is a contained change. Sling and dlt in particular sit behind one source-connector interface.
+For clients with stricter availability requirements, the documented upgrade path is external managed PostgreSQL and object storage, and the platform on k3s across two nodes.
+11.3 Scalability
+Strengths
+Workers are stateless and scale by replica count; the pipeline parallelises naturally by source and by test.
+Multi-tenancy is handled by row-level scoping rather than schema duplication, so the marginal cost of a tenant is data, not infrastructure.
+DuckDB over Parquet scales analytic scans with memory and cores rather than requiring a distributed engine.
+The Helm chart is maintained from day one, so the Kubernetes path is exercised rather than theoretical.
+Weaknesses and residual risk
+PostgreSQL is the scaling bottleneck. It carries the canonical model, the exception store and the job queue simultaneously. At high exception volumes the queue and the query workload contend.
+Exception volume, not data volume, is the real constraint. A poorly tuned rule pack at a large client can generate millions of exceptions, and the queue UI, the reconciliation step and the database all degrade together.
+Vertical ceiling. Beyond roughly an order of magnitude above the assumed five million lines per period, the single-VM model stops being appropriate and the architecture must change rather than merely grow.
+Tenant noisy-neighbour effects. Where multiple tenants share one deployment, a large tenant's run can starve others.
+Mitigations
+Partition the exception table by period and tenant from the first release; retrofitting partitioning to a large table is painful.
+Enforce a per-rule exception ceiling: a rule exceeding a configured threshold in one run is halted and flagged for tuning rather than permitted to flood the queue.
+Separate the job queue onto its own PostgreSQL instance as the documented first scaling step.
+Per-tenant worker concurrency limits and run windows.
+11.4 Performance
+Design targets
+The figures below are targets used to size the deployment. They are not measured results, and no benchmark has yet been executed against a representative client dataset. They must be validated before any contractual commitment.
+Stage
+Target at 5 M journal lines
+Governing factor
+Bulk extract (file or database)
+Minutes to under an hour
+Source system throughput and network, not platform
+API extract (OData, paged)
+Hours
+Rate limiting and page size; unsuitable for historical backfill
+Tie-out and snapshot to Parquet
+Minutes
+Disk throughput
+dbt transform to canonical
+Minutes
+PostgreSQL CPU and memory
+DuckDB set-based test suite
+Minutes
+Memory, core count, and the cost of pairwise comparisons
+ZEN scoring of candidates
+Sub-second per thousand candidates
+In-process evaluation, no network hop
+Exception queue page load
+Under one second
+Index design and server-side pagination
+
+Weaknesses and residual risk
+API extraction is the slow path. Retrieving a million journal lines through OData paging takes hours where a bulk file drop takes minutes. APIs are appropriate for incremental daily deltas and master data, not initial historical loads. Clients will nonetheless ask for API-only integration.
+Pairwise comparisons dominate. Duplicate-payment detection is inherently quadratic without blocking keys. Naive implementations become the slowest element of the run.
+Two SQL dialects. Maintaining tests in both PostgreSQL and DuckDB creates a risk that a test's definition of the population diverges between the two.
+Queue performance under volume. Filtering and sorting hundreds of thousands of exceptions is straightforward to get wrong and is the most visible performance characteristic to users.
+Mitigations
+Mandatory blocking keys on all pairwise tests — vendor, amount band, date window — reducing comparison cost by orders of magnitude.
+Resumable, backoff-aware API extraction. A run that fails at hour three must resume, not restart.
+Write all analytic tests against Parquet-shaped canonical tables from the outset, so that the PostgreSQL-to-DuckDB migration is mechanical and the population definition is shared.
+Establish a performance test suite with a synthetic five-million-line dataset in the first delivery phase, and treat the targets above as regression thresholds.
+11.5 Interoperability
+Strengths
+Standards throughout: OIDC and SAML for identity, S3 for object storage, OTLP and syslog for telemetry, Parquet for data interchange, OData and JDBC for sources.
+The canonical model decouples rules from source schemas, so a client migrating from ECC to S/4HANA changes mappings, not tests.
+JDM rules are portable JSON and can be exported, reviewed externally, or executed by any ZEN binding in nine languages.
+Read-only BI access to the canonical model means the platform does not become a data silo.
+Weaknesses and residual risk
+The hard part is not technical. Obtaining SAP or core-banking access is a political and commercial negotiation. The architecture cannot remove that constraint, only accommodate it.
+Core banking has no standards. T24, Finacle and Flexcube each require bespoke handling, and vendor gateways are frequently SOAP or proprietary.
+No outbound workflow integration in the initial release. Clients will expect exceptions to raise tickets in ServiceNow or Jira, and findings to flow to their GRC platform.
+Mitigations
+The extraction contract as the primary interoperability instrument: the client's IT satisfies it however they can, and conformance is validated on arrival.
+A documented, stable public API on the platform itself, with webhooks for exception lifecycle events, so downstream integration is the client's to build.
+Treat each core banking platform as a product investment with a reusable extraction template, not as per-client bespoke work.
+11.6 Portability
+Strengths
+Three container images from one codebase, running under Compose, Podman, Docker or Kubernetes without modification.
+No cloud-provider services, no managed dependencies, no proprietary runtime. The platform installs identically on a bank's VMware estate and on a laptop.
+No licence key and no vendor callback, which is what makes genuine air-gapped installation possible.
+Rules, transformations and mappings are all data — JSON, SQL and YAML — and can be exported wholesale.
+Parquet snapshots remain readable by standard tooling long after the platform is decommissioned, which matters for evidence retention.
+Weaknesses and residual risk
+cgo constrains the build. zen-go is a cgo binding without musl support, so Alpine is excluded and cross-compilation is more involved than for pure Go.
+Python in the worker image. dlt introduces a Python runtime, enlarging the image, widening the CVE surface presented at security review, and complicating the otherwise single-binary story.
+Architecture support. ARM64 deployment requires validating the Rust core and every binding on that platform. Multi-architecture builds must be established before the cgo and Python dependencies harden, not after.
+Orchestration is the only non-portable layer. The images run anywhere; the wrapper does not. Quadlet is systemd-only and therefore cannot be the shipped default, which means maintaining Compose as the primary path and Quadlet as an overlay — two mechanisms to test rather than one.
+Runtime version floor. Podman 4.4 is required for Quadlet and a usable compose implementation. Ubuntu 22.04 ships 3.4, so a proportion of clients will need a package source added before installation — a small but real friction point in environments where adding repositories requires change approval.
+Linux-only in practice. Windows and macOS are developer-workstation targets only. This is normal for containerised server software and has not been a competitive issue, but it should be stated in proposals rather than discovered during procurement.
+Mitigations
+Debian-slim or distroless base images, standardised and documented, with the Alpine incompatibility recorded so it is not rediscovered.
+Keep REST extraction behind the same source-connector interface as Sling, so that replacing dlt with a Go implementation later is a contained change if the Python dependency becomes a procurement obstacle.
+Build and test multi-architecture images in CI from the outset rather than retrofitting.
+Generate all three orchestration formats — Compose, Quadlet and Helm — from one source of truth, so drift between them is structurally impossible rather than a matter of discipline.
+Runtime version and rootless prerequisites validated by the preflight script and reported to the client before a deployment date is agreed.
+A declared, CI-tested support matrix (section 9.5) that is narrow enough to honour contractually, rather than an open-ended claim of cross-platform support.
+11.7 Licence exposure summary
+Licence
+Components
+Position
+MIT / BSD / Apache-2.0
+Go, ZEN, JDM Editor, Sling, dlt, dbt-core, Zitadel, React stack, OpenTelemetry, Caddy, build tooling
+Permissive. No distribution obligation beyond attribution. No action required.
+PostgreSQL Licence
+PostgreSQL
+Permissive, BSD-like. No action required.
+MPL-2.0
+River
+File-level copyleft. Obligation arises only if River's own source files are modified; using it as a library does not trigger it.
+AGPL-3.0
+MinIO, OpenObserve
+Used unmodified as network services over standard protocols, so the obligation is not triggered by our application code. Both are nonetheless replaceable — client-provided S3 storage and VictoriaMetrics respectively — and a prepared position plus a documented alternative should accompany every proposal.
+
+12. Risk Register
+Risk
+Impact
+Likelihood
+Mitigation
+Source access refused or delayed by client IT
+High
+High
+Extraction contract allows the client to fulfil by any means; file drop as the universal fallback; raise in pre-sales rather than at implementation
+SAP indirect access or support-status implications surface late
+High
+Medium
+Written confirmation from the client's SAP team before build commences
+Rule pack produces unacceptable false-positive rates
+High
+High
+Precision tracking per rule from day one; per-rule exception ceiling; tuning as a funded phase, not an afterthought
+Exception identity instability causes dismissed items to reappear
+High
+Medium
+Deterministic hashing plus reconciliation implemented in the first phase and covered by automated tests
+Single VM failure or data loss
+High
+Low
+Verified restore testing; rebuild-from-bundle procedure; contractual RTO
+Key open source dependency abandoned
+Medium
+Medium
+Interface isolation for Sling, dlt and the telemetry backend; annual dependency health review
+AGPL components challenged by client legal
+Medium
+Medium
+Documented position and a drop-in alternative for each
+Performance targets not met at a large client
+Medium
+Medium
+Benchmark suite in phase one; blocking keys mandatory; DuckDB path already designed
+Auditors abandon the tool after initial deployment
+High
+Medium
+Queue-first UI; suppression with expiry; precision visibility; onboarding and tuning included in delivery
+Per-client integration cost erodes margin
+High
+Medium
+Extraction contract plus mapping console converts integration from engineering to implementation work
+Evidence chain insufficient under external challenge
+High
+Low
+Rule version, parameters, snapshot and engine version bound to every finding; Parquet snapshots retained
+13. Delivery Sequence
+Phase
+Outcome
+Key content
+1. Spine
+One source to one exception, end to end
+Canonical model, file and database extraction, tie-out, dbt transform, three tests, exception identity and reconciliation, exception queue
+2. Authoring
+Auditors change rules without engineering
+JDM Editor embedded, rule catalog, tenant parameters, versioning, simulation, release
+3. Operability
+Deployable and supportable at a client
+Compose bundle, Zitadel, observability, run monitor, deadman alerting, backup and restore runbook, security artefacts
+4. Onboarding
+Implementation without engineering
+Source and mapping console, schema discovery, profiling, REST templates
+5. Scale and assurance
+Ready for a large client
+DuckDB analytics path, partitioning, performance benchmark suite, assurance dashboard, SIEM export, public API and webhooks
+
+The benchmark suite in phase five is deliberately preceded by the spine in phase one: performance work without a representative dataset and a real rule pack optimises the wrong things.
+14. Open Decisions
+Whether the first target market is banks or mid-market. This determines Zitadel versus Keycloak as the shipped default, and how much of the security artefact set must exist before first sale.
+Whether dbt-core is retained in the worker image or its function is reimplemented in Go, removing the Python dependency at the cost of losing lineage and testing for free.
+Whether multiple tenants share one deployment or each client receives an isolated stack. The architecture supports both; the commercial model should decide.
+Retention policy for Parquet snapshots, which drives storage sizing more than any other factor.
+Whether the shipped test library is built against published catalogues — IIA guidance on continuous auditing, ISACA material, established script libraries — to give the tests recognisable provenance with audit committees.
