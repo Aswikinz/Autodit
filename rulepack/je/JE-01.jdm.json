@@ -1,0 +1,86 @@
+{
+  "nodes": [
+    {
+      "id": "input",
+      "name": "Candidate",
+      "type": "inputNode",
+      "position": {
+        "x": 50,
+        "y": 150
+      }
+    },
+    {
+      "id": "decision",
+      "name": "JE-01",
+      "type": "decisionTableNode",
+      "position": {
+        "x": 350,
+        "y": 150
+      },
+      "content": {
+        "hitPolicy": "first",
+        "inputs": [
+          {
+            "id": "condition",
+            "name": "Qualifies under tenant policy",
+            "field": "qualifies"
+          }
+        ],
+        "outputs": [
+          {
+            "id": "flag",
+            "name": "Flag",
+            "field": "flag"
+          },
+          {
+            "id": "severity",
+            "name": "Severity",
+            "field": "severity"
+          },
+          {
+            "id": "owner_role",
+            "name": "Owner Role",
+            "field": "owner_role"
+          }
+        ],
+        "rules": [
+          {
+            "_id": "qualifying",
+            "condition": "true",
+            "flag": "true",
+            "severity": "\"medium\"",
+            "owner_role": "\"auditor\""
+          },
+          {
+            "_id": "otherwise",
+            "condition": "",
+            "flag": "false",
+            "severity": "\"low\"",
+            "owner_role": "\"auditor\""
+          }
+        ]
+      }
+    },
+    {
+      "id": "output",
+      "name": "Decision",
+      "type": "outputNode",
+      "position": {
+        "x": 650,
+        "y": 150
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "in",
+      "sourceId": "input",
+      "targetId": "decision"
+    },
+    {
+      "id": "out",
+      "sourceId": "decision",
+      "targetId": "output"
+    }
+  ]
+}

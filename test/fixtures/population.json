@@ -1,0 +1,17 @@
+{
+  "source_id": "test-source",
+  "period": {"id": "FY26-P08", "start": "2026-08-01", "end": "2026-08-31"},
+  "control_reference": "SYNTHETIC independent control report 001",
+  "controls": [
+    {"entity": "payment", "currency": "USD", "count": 2, "amount": "5000", "debit": "0", "credit": "0"},
+    {"entity": "journal_entry", "currency": "USD", "count": 2, "amount": "0", "debit": "1500", "credit": "1500"},
+    {"entity": "approval", "currency": "USD", "count": 1, "amount": "2500", "debit": "0", "credit": "0"}
+  ],
+  "records": [
+    {"entity":"payment","id":"P1","date":"2026-08-03","amount":"2500","currency":"USD","reporting_amount":"2500","reporting_currency":"USD","exchange_rate":"1","rate_date":"2026-08-03","vendor_id":"V1","debit":"0","credit":"0","limit":"0","reversal":false,"intercompany":false},
+    {"entity":"payment","id":"P2","date":"2026-08-04","amount":"2500","currency":"USD","reporting_amount":"2500","reporting_currency":"USD","exchange_rate":"1","rate_date":"2026-08-04","vendor_id":"V1","debit":"0","credit":"0","limit":"0","reversal":false,"intercompany":false},
+    {"entity":"journal_entry","id":"J1","date":"2026-08-01","amount":"0","currency":"USD","reporting_amount":"0","reporting_currency":"USD","exchange_rate":"1","rate_date":"2026-08-01","vendor_id":"","debit":"1500","credit":"0","limit":"0","reversal":false,"intercompany":false},
+    {"entity":"journal_entry","id":"J2","date":"2026-08-01","amount":"0","currency":"USD","reporting_amount":"0","reporting_currency":"USD","exchange_rate":"1","rate_date":"2026-08-01","vendor_id":"","debit":"0","credit":"1500","limit":"0","reversal":false,"intercompany":false},
+    {"entity":"approval","id":"A1","date":"2026-08-03","amount":"2500","currency":"USD","reporting_amount":"2500","reporting_currency":"USD","exchange_rate":"1","rate_date":"2026-08-03","vendor_id":"","debit":"0","credit":"0","limit":"2000","reversal":false,"intercompany":false}
+  ]
+}
