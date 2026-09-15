@@ -176,4 +176,28 @@ func TestPipelineIntegration(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
+	// A filesystem delivery is exactly-once per filename/content receipt, even
+	// when the worker restarts before seeing its own prior submission.
+	population.Controls[0].Amount = "5000"
+	receipt:=domain.Hash([]byte("landed-file"))
+	landedID,e:=tenant.SubmitInbox(ctx,population,receipt);if e!=nil{t.Fatal(e)}
+	duplicateID,e:=tenant.SubmitInbox(ctx,population,receipt);if e!=nil||duplicateID!=landedID{t.Fatal("receipt duplicated run",e)}
+	if _,e=tenant.SubmitInbox(ctx,population,"bad");e==nil{t.Fatal("invalid receipt accepted")}
+	if worked,e:=tenant.ProcessNext(ctx,objects,now);e!=nil||!worked{t.Fatal("landed run failed",e)}
+	if worked,e:=tenant.ProcessNext(ctx,objects,now);e!=nil||worked{t.Fatal("idle worker invented work",e)}
+	// Suppression survives parameter edits but reopens on source-field changes.
+	journalKey:=domain.ExceptionKey("JE-01","journal_entry",domain.EntityID(population.SourceID,"J1"),population.Period.ID)
+	getState:=func(k string)(string,int){t.Helper();b,e:=tenant.Detail(ctx,k);if e!=nil{t.Fatal(e)};var v struct{Exception struct{State string `json:"state"`;Revision int `json:"revision"`} `json:"exception"`};_=json.Unmarshal(b,&v);return v.Exception.State,v.Exception.Revision}
+	_,revision:=getState(journalKey);if e=tenant.Dispose(ctx,journalKey,"auditor","documented exception",exceptions.InReview,revision,nil,now());e!=nil{t.Fatal(e)}
+	expiry:=now().Add(24*time.Hour);if e=tenant.Dispose(ctx,journalKey,"auditor","approved until tomorrow",exceptions.Suppressed,revision+1,&expiry,now());e!=nil{t.Fatal(e)}
+	parameters:=rules.Defaults();parameters.Materiality="1200";if e=tenant.SaveParameters(ctx,parameters,1,"manager");e!=nil{t.Fatal(e)}
+	run(population,"completed");if state,_:=getState(journalKey);state!="suppressed"{t.Fatal("parameter edit resurrected suppression")}
+	population.Records[2].Date="2026-08-02";run(population,"completed");if state,_:=getState(journalKey);state!="reopened"{t.Fatal("source change did not reopen suppression")}
+	// A disabled rule is outside the reconciliation scope and cannot resolve its queue.
+	var journalModel rules.Model;for _,m:=range models{if m.ID=="JE-01"{journalModel=m}}
+	if e=tenant.Release(ctx,"JE-01",journalModel.Content,false,1,"manager");e!=nil{t.Fatal(e)}
+	population.Records[2].Date="2026-08-03";run(population,"completed");if state,_:=getState(journalKey);state!="reopened"{t.Fatal("disabled rule resolved an untested exception")}
+	// Canonical populations may not redefine a fiscal period's boundaries.
+	badPeriod:=population;badPeriod.Period.Start="2026-07-01";if _,e=tenant.Submit(ctx,badPeriod,"implementer");e!=ErrConflict{t.Fatal("fiscal period silently redefined")}
+	if _,e=store.ForTenant("not-uuid");e==nil{t.Fatal("invalid tenant accepted")}
 }

@@ -28,6 +28,7 @@ func Inbox(ctx context.Context, dir string) ([]Landed, error) {
 		return nil, errors.New("inbox unavailable")
 	}
 	out := []Landed{}
+	var problem error
 	for _, entry := range entries {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
@@ -37,20 +38,17 @@ func Inbox(ctx context.Context, dir string) ([]Landed, error) {
 		}
 		info, e := entry.Info()
 		if e != nil || info.Size() > 32*1024*1024 {
-			return nil, errors.New("inbox file exceeds size limit")
+			problem = errors.New("inbox file exceeds size limit"); continue
 		}
 		b, e := os.ReadFile(filepath.Join(dir, entry.Name()))
 		if e != nil {
-			return nil, errors.New("inbox read failed")
+			problem = errors.New("inbox read failed"); continue
 		}
 		var p domain.Population
 		if json.Unmarshal(b, &p) != nil || p.Validate() != nil {
-			return nil, errors.New("inbox extraction contract invalid")
+			problem = errors.New("inbox extraction contract invalid"); continue
 		}
 		out = append(out, Landed{Population: p, Receipt: domain.Hash(append([]byte(entry.Name()+"\x00"), b...))})
-		if len(out) >= 100 {
-			break
-		}
 	}
-	return out, nil
+	return out, problem
 }
