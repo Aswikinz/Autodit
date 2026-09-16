@@ -1,7 +1,10 @@
 """Enforce the supplied backend coverage floors against the merged integration profile."""
-import collections,sys
+import argparse,collections,sys
 from pathlib import Path
-profile=Path(sys.argv[1] if len(sys.argv)>1 else 'coverage-integration.out')
+from safe_paths import confined_path
+parser=argparse.ArgumentParser(description=__doc__)
+parser.add_argument('profile',nargs='?',choices=['coverage-integration.out','coverage.out'],default='coverage-integration.out')
+profile=confined_path(Path(__file__).resolve().parent.parent,parser.parse_args().profile)
 blocks={}
 for line in profile.read_text().splitlines()[1:]:
  location,statements,count=line.rsplit(' ',2)

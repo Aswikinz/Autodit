@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"strings"
+	"net/url"
 	"sync"
 	"time"
 
@@ -104,7 +104,14 @@ func (m *Manager) Mutation(r *http.Request, i Identity) bool {
 }
 
 func (m *Manager) cookie(w http.ResponseWriter, name, value string, maxAge int) {
-	http.SetCookie(w, &http.Cookie{Name: name, Value: value, Path: "/", HttpOnly: true, Secure: strings.HasPrefix(m.cfg.PublicURL, "https://"), SameSite: http.SameSiteLaxMode, MaxAge: maxAge})
+	cookie := &http.Cookie{Name: name, Value: value, Path: "/", HttpOnly: true, Secure: true, SameSite: http.SameSiteLaxMode, MaxAge: maxAge}
+	origin, err := url.Parse(m.cfg.PublicURL)
+	// The explicit local-only evaluation mode supports HTTP clients. OIDC and
+	// every HTTPS deployment always retain Secure, regardless of request headers.
+	if err == nil && m.cfg.AuthMode == "demo" && origin.Scheme == "http" && (origin.Hostname() == "localhost" || origin.Hostname() == "127.0.0.1") {
+		cookie.Secure = false
+	}
+	http.SetCookie(w, cookie)
 }
 func (m *Manager) establish(w http.ResponseWriter, i Identity, expires time.Time) {
 	id := token()

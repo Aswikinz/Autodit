@@ -3,11 +3,39 @@ package auth
 import (
 	"context"
 	"github.com/Aswikinz/Autodit/internal/platform"
+	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 )
+
+func TestSecureCookiePolicy(t *testing.T) {
+	for _, tc := range []struct {
+		mode, origin string
+		secure       bool
+	}{
+		{"demo", "http://localhost:8088", false},
+		{"demo", "http://127.0.0.1:8088", false},
+		{"demo", "https://localhost:8088", true},
+		{"demo", "https://audit.example", true},
+		{"oidc", "https://audit.example", true},
+		{"oidc", "http://localhost:8088", true},
+		{"demo", "http://localhost.attacker.invalid", true},
+		{"unknown", "http://localhost:8088", true},
+		{"demo", ":invalid", true},
+	} {
+		t.Run(tc.mode+tc.origin, func(t *testing.T) {
+			m := Manager{cfg: platform.Config{AuthMode: tc.mode, PublicURL: tc.origin}}
+			response := httptest.NewRecorder()
+			m.cookie(response, "autodit_session", "opaque", 60)
+			cookie := response.Result().Cookies()[0]
+			if cookie.Secure != tc.secure || !cookie.HttpOnly || cookie.SameSite != http.SameSiteLaxMode {
+				t.Fatal("cookie security policy violated")
+			}
+		})
+	}
+}
 
 func TestRoleSeparation(t *testing.T) {
 	t.Parallel()

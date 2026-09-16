@@ -15,10 +15,14 @@ with tempfile.TemporaryDirectory(prefix='autodit-restore-') as temp:
  path=Path(temp)
  try:
   run(*compose,'stop','-t','120','api','worker')
-  run('exec','autodit_postgres_1','pg_dump','-U','autodit_owner','-d','autodit','-Fc','-f','/tmp/autodit-drill.dump')
+  # Keep the dump in this atomically created private directory; no predictable
+  # writable path is opened inside the database container.
+  with (path/'database.dump').open('xb') as backup:
+   run('exec','autodit_postgres_1','pg_dump','-U','autodit_owner','-d','autodit','-Fc',stdout=backup)
   run('volume','export','autodit_snapshots','--output',str(path/'snapshots.tar'))
   run('exec','autodit_postgres_1','createdb','-U','autodit_owner',database)
-  run('exec','autodit_postgres_1','pg_restore','-U','autodit_owner','-d',database,'--exit-on-error','/tmp/autodit-drill.dump')
+  with (path/'database.dump').open('rb') as backup:
+   run('exec','-i','autodit_postgres_1','pg_restore','-U','autodit_owner','-d',database,'--exit-on-error',stdin=backup)
   original=subprocess.check_output([podman,'exec','autodit_postgres_1','psql','-U','autodit_owner','-d','autodit','-At','-c','select count(*) from observation'],text=True).strip()
   if sql('select count(*) from observation')!=original:raise RuntimeError('Observation count changed on restore')
   snapshots=json.loads(sql("select coalesce(json_agg(json_build_object('ref',object_ref,'hash',content_hash)),'[]') from snapshot"))

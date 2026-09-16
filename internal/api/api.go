@@ -6,12 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"io/fs"
 	"net/http"
-	"os"
-	"path"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/Aswikinz/Autodit/internal/auth"
@@ -307,24 +303,7 @@ func (s *Server) Handler() http.Handler {
 		}
 		return e
 	}))
-	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
-		if strings.HasPrefix(r.URL.Path, "/api/") {
-			http.NotFound(w, r)
-			return
-		}
-		name := strings.TrimPrefix(path.Clean(r.URL.Path), "/")
-		if name == "" {
-			name = "index.html"
-		}
-		files := os.DirFS(s.WebDir)
-		if _, e := fs.Stat(files, name); e != nil {
-			name = "index.html"
-		}
-		if strings.HasPrefix(name, "assets/") {
-			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
-		}
-		http.ServeFileFS(w, r, files, name)
-	})
+	mux.HandleFunc("GET /", serveFrontend(s.WebDir))
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("X-Frame-Options", "DENY")

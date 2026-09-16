@@ -17,12 +17,19 @@ import tempfile
 import time
 import urllib.request
 import uuid
+from safe_paths import confined_path
 
 root = Path(__file__).resolve().parent.parent
 parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument("--bundle", type=Path, default=root / "dist/autodit-0.1.0-offline.tar.gz")
+parser.add_argument("--bundle", type=Path, default=root / "dist/autodit-0.1.0-offline.tar.gz", help="Archive under dist/; relative paths start at the repository root")
 parser.add_argument("--port", type=int, default=8089)
 args = parser.parse_args()
+try:
+    bundle = confined_path(root / 'dist', root / args.bundle)
+except ValueError:
+    parser.error('--bundle must remain inside dist/')
+if not bundle.name.endswith('.tar.gz') or not bundle.is_file():
+    parser.error('--bundle must name an existing .tar.gz archive inside dist/')
 podman = shutil.which("podman") or r"C:\Program Files\RedHat\Podman\podman.exe"
 project = "autodit_smoke_" + uuid.uuid4().hex[:10]
 origin = f"http://localhost:{args.port}"
@@ -33,7 +40,7 @@ def run(*command, **kwargs):
 
 with tempfile.TemporaryDirectory(prefix="autodit-deployment-") as temporary:
     workspace = Path(temporary)
-    with tarfile.open(args.bundle) as archive:
+    with tarfile.open(bundle) as archive:
         archive.extractall(workspace, filter="data")
     stage = workspace / "autodit"
     for line in (stage / "checksums.txt").read_text().splitlines():
