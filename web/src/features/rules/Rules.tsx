@@ -256,7 +256,7 @@ export function Rules({ roles }: { roles: string[] }) {
                         setDraft({
                           ...parameters,
                           weekend_days: e.target.checked
-                            ? [...parameters.weekend_days, i].sort()
+                            ? [...parameters.weekend_days, i].sort((a, b) => a - b)
                             : parameters.weekend_days.filter((d) => d !== i),
                         })
                       }

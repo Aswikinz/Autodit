@@ -158,10 +158,9 @@ function App() {
                   value={token}
                   onChange={(e) => setToken(e.target.value)}
                   required
-                  autoFocus
                 />
               </label>
-              <button className="button primary" disabled={busy}>
+              <button type="submit" className="button primary" disabled={busy}>
                 Open workspace <ArrowRight size={16} />
               </button>
             </form>

@@ -1,7 +1,7 @@
 FROM docker.io/library/node:24-bookworm-slim AS web
 WORKDIR /src/web
 COPY web/package.json web/package-lock.json ./
-RUN npm ci --no-audit --no-fund
+RUN npm ci --ignore-scripts --no-audit --no-fund
 COPY web/ ./
 COPY test/fixtures/population.json /src/test/fixtures/population.json
 RUN npm run build
