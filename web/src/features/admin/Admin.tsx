@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { client, result, message, label } from "../../lib/client";
 import { ErrorBox, Help, SectionTitle, Spinner } from "../../components/Shared";
 import { SettingsPanel } from "./Settings";
+import { WorkflowSettings } from "./WorkflowSettings";
 
 type User = {
   username: string;
@@ -228,6 +229,7 @@ export function Admin() {
         </div>
       )}
       <SettingsPanel />
+      <WorkflowSettings />
     </>
   );
 }

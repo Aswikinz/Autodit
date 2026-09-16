@@ -65,7 +65,7 @@ func (t *Tenant) Queue(ctx context.Context, f QueueFilter) (QueuePage, error) {
 func (t *Tenant) Detail(ctx context.Context, key string) (json.RawMessage, error) {
 	var out json.RawMessage
 	e := t.Tx(ctx, func(tx pgx.Tx) error {
-		e := tx.QueryRow(ctx, `select jsonb_build_object('exception',to_jsonb(e),'observations',coalesce((select jsonb_agg(to_jsonb(o) order by o.created_at desc,o.id) from observation o where o.tenant_id=e.tenant_id and o.exception_key=e.key),'[]'),'events',coalesce((select jsonb_agg(to_jsonb(v) order by v.created_at,v.id) from exception_event v where v.tenant_id=e.tenant_id and v.exception_key=e.key),'[]'),'newer_snapshot_exists',exists(select 1 from audit_run r where r.tenant_id=e.tenant_id and r.source_id=e.source_id and r.period_id=e.period_id and r.status='completed' and r.snapshot_id<>e.snapshot_id and r.created_at>e.first_seen_at)) from exception e where e.tenant_id=$1 and e.key=$2`, t.ID, key).Scan(&out)
+		e := tx.QueryRow(ctx, `select jsonb_build_object('exception',to_jsonb(e),'has_review_case',exists(select 1 from review_case c where c.tenant_id=e.tenant_id and c.exception_key=e.key),'observations',coalesce((select jsonb_agg(to_jsonb(o) order by o.created_at desc,o.id) from observation o where o.tenant_id=e.tenant_id and o.exception_key=e.key),'[]'),'events',coalesce((select jsonb_agg(to_jsonb(v) order by v.created_at,v.id) from exception_event v where v.tenant_id=e.tenant_id and v.exception_key=e.key),'[]'),'newer_snapshot_exists',exists(select 1 from audit_run r where r.tenant_id=e.tenant_id and r.source_id=e.source_id and r.period_id=e.period_id and r.status='completed' and r.snapshot_id<>e.snapshot_id and r.created_at>e.first_seen_at)) from exception e where e.tenant_id=$1 and e.key=$2`, t.ID, key).Scan(&out)
 		if errors.Is(e, pgx.ErrNoRows) {
 			return ErrNotFound
 		}
@@ -88,6 +88,13 @@ func (t *Tenant) Dispose(ctx context.Context, key, actor, reason string, to exce
 		}
 		if current != revision {
 			return ErrConflict
+		}
+		var managed bool
+		if e = tx.QueryRow(ctx, `select exists(select 1 from review_case where tenant_id=$1 and exception_key=$2)`, t.ID, key).Scan(&managed); e != nil {
+			return e
+		}
+		if managed {
+			return errors.Join(ErrConflict, errors.New("finding has a review workflow; use case actions"))
 		}
 		if e = exceptions.Transition(from, to, strings.TrimSpace(reason), expiry, now); e != nil {
 			return e

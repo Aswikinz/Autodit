@@ -10,6 +10,8 @@ schemas = {
 }
 paths = {}
 endpoints = [
+ ('get','/api/admin/workflow','Object',None),('put','/api/admin/workflow',None,'Object'),
+ ('get','/api/cases','ObjectList',None),('get','/api/cases/people','ObjectList',None),('get','/api/cases/{key}/events','ObjectList',None),('post','/api/cases/{key}/actions',None,'Object'),
  ('post','/api/sources/connection','Object','Object'),('post','/api/sources/preview','Object','Object'),('post','/api/sources/workbook','Object','Object'),
  ('get','/api/workspace','Object',None),('put','/api/admin/settings',None,'Object'),
  ('post','/api/password-login',None,'Object'),('post','/api/password',None,'Object'),
@@ -31,6 +33,7 @@ for method, route, response, body in endpoints:
     params=[]
     for param in ('key','id'):
         if '{'+param+'}' in route: params.append({'name':param,'in':'path','required':True,'schema':{'type':'string'}})
+    if route=='/api/cases': params += [{'name':'status','in':'query','schema':{'type':'string'}},{'name':'page','in':'query','schema':{'type':'integer'}}]
     if route=='/api/exceptions':
         params += [{'name':p,'in':'query','schema':{'type':'integer' if p in ('page','size') else 'string'}} for p in ('page','size','state','rule','severity','search','sort')]
     if method not in ('get',): params.append({'name':'X-CSRF-Token','in':'header','schema':{'type':'string'}})

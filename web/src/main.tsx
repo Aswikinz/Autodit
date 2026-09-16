@@ -23,6 +23,7 @@ import { Sources } from "./features/sources/Sources";
 import { Rules } from "./features/rules/Rules";
 import { Assurance } from "./features/assurance/Assurance";
 import { Admin, ChangePassword } from "./features/admin/Admin";
+import { Cases } from "./features/cases/Cases";
 import { ErrorBox, Spinner } from "./components/Shared";
 import {
   client,
@@ -40,6 +41,12 @@ const qc = new QueryClient({
   },
 });
 const tabs = [
+  {
+    id: "cases",
+    name: "Review cases",
+    icon: CheckCheck,
+    roles: ["auditor", "audit_manager", "implementer", "rule_engineer"],
+  },
   { id: "admin", name: "Administration", icon: ShieldCheck, roles: ["admin"] },
   {
     id: "queue",
@@ -338,9 +345,13 @@ function App() {
             />
           )}
           {page === "admin" && <Admin />}
-          {page === "queue" && (
-            <Queue onImport={() => setActive("sources")} />
-          )}{" "}
+          {page === "cases" && (
+            <Cases
+              subject={session.identity.subject}
+              roles={session.identity.roles}
+            />
+          )}
+          {page === "queue" && <Queue onImport={() => setActive("sources")} />}{" "}
           {page === "runs" && <Runs onImport={() => setActive("sources")} />}{" "}
           {page === "sources" && <Sources onRun={() => setActive("runs")} />}{" "}
           {page === "rules" && <Rules roles={session.identity.roles} />}{" "}

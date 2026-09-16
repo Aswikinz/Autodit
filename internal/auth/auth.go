@@ -82,6 +82,14 @@ func Allowed(i Identity, operation string) bool {
 	if operation == "workspace.read" {
 		return len(i.Roles) > 0
 	}
+	if operation == "cases.read" || operation == "cases.write" {
+		for _, r := range i.Roles {
+			if r == "auditor" || r == "audit_manager" || r == "implementer" || r == "rule_engineer" {
+				return true
+			}
+		}
+		return false
+	}
 	if operation == "parameters.read" {
 		for _, r := range i.Roles {
 			if r == "admin" || r == "auditor" || r == "audit_manager" || r == "rule_engineer" {
@@ -98,7 +106,7 @@ func Allowed(i Identity, operation string) bool {
 		}
 		return false
 	}
-	roles := map[string][]string{"exceptions.read": {"auditor", "audit_manager"}, "exceptions.write": {"auditor", "audit_manager"}, "runs.read": {"auditor", "audit_manager", "implementer", "admin"}, "runs.write": {"implementer"}, "sources.read": {"implementer", "audit_manager", "admin"}, "sources.write": {"implementer"}, "rules.read": {"auditor", "audit_manager", "rule_engineer"}, "rules.simulate": {"auditor", "audit_manager", "rule_engineer"}, "rules.write": {"admin", "audit_manager", "rule_engineer"}, "assurance.read": {"auditor", "audit_manager"}}
+	roles := map[string][]string{"exceptions.read": {"auditor", "audit_manager"}, "exceptions.write": {"auditor", "audit_manager"}, "runs.read": {"auditor", "audit_manager", "implementer", "admin"}, "runs.write": {"implementer"}, "sources.read": {"implementer", "audit_manager", "admin"}, "sources.write": {"implementer"}, "rules.read": {"auditor", "audit_manager", "rule_engineer"}, "rules.simulate": {"auditor", "audit_manager", "rule_engineer"}, "rules.write": {"audit_manager", "rule_engineer"}, "parameters.write": {"admin", "audit_manager", "rule_engineer"}, "assurance.read": {"auditor", "audit_manager"}}
 	for _, have := range i.Roles {
 		for _, want := range roles[operation] {
 			if have == want {

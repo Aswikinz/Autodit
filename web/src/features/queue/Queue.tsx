@@ -407,7 +407,13 @@ export function Queue({ onImport }: { onImport: () => void }) {
   );
 }
 
-function ExceptionDetail({ id, onClose }: { id: string; onClose: () => void }) {
+export function ExceptionDetail({
+  id,
+  onClose,
+}: {
+  id: string;
+  onClose: () => void;
+}) {
   const cache = useQueryClient();
   const query = useQuery({
     queryKey: ["exception", id],
@@ -572,6 +578,12 @@ function ExceptionDetail({ id, onClose }: { id: string; onClose: () => void }) {
             </details>
           ))}
           <h3>Investigation</h3>
+          {data.has_review_case && (
+            <div className="notice">
+              This finding is managed through Review cases. Complete its
+              required workflow steps there. You can add evidence notes here.
+            </div>
+          )}
           <label className="field">
             Reason or investigation note
             <textarea
@@ -581,7 +593,7 @@ function ExceptionDetail({ id, onClose }: { id: string; onClose: () => void }) {
               placeholder="Record your assessment and supporting context…"
             />
           </label>
-          {item.state === "in_review" && (
+          {!data.has_review_case && item.state === "in_review" && (
             <label className="field">
               Suppression expiry (required to suppress)
               <input
@@ -592,16 +604,17 @@ function ExceptionDetail({ id, onClose }: { id: string; onClose: () => void }) {
             </label>
           )}
           <div className="actions">
-            {["open", "reopened"].includes(item.state) && (
-              <button
-                disabled={busy || !reason.trim()}
-                className="button primary"
-                onClick={() => void dispose("in_review")}
-              >
-                Start review
-              </button>
-            )}
-            {item.state === "in_review" && (
+            {!data.has_review_case &&
+              ["open", "reopened"].includes(item.state) && (
+                <button
+                  disabled={busy || !reason.trim()}
+                  className="button primary"
+                  onClick={() => void dispose("in_review")}
+                >
+                  Start review
+                </button>
+              )}
+            {!data.has_review_case && item.state === "in_review" && (
               <>
                 <button
                   disabled={busy || !reason.trim()}

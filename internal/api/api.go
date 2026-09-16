@@ -105,6 +105,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/password", s.Auth.PasswordChange)
 	s.adminRoutes(mux)
 	s.connectorRoutes(mux)
+	s.workflowRoutes(mux)
 	mux.HandleFunc("POST /api/logout", s.Auth.Logout)
 	mux.HandleFunc("GET /auth/login", s.Auth.Login)
 	mux.HandleFunc("GET /auth/callback", s.Auth.Callback)
@@ -257,7 +258,7 @@ func (s *Server) Handler() http.Handler {
 		}
 		return e
 	}))
-	mux.HandleFunc("PUT /api/parameters", s.route("rules.write", func(w http.ResponseWriter, r *http.Request, t *storage.Tenant, i auth.Identity) error {
+	mux.HandleFunc("PUT /api/parameters", s.route("parameters.write", func(w http.ResponseWriter, r *http.Request, t *storage.Tenant, i auth.Identity) error {
 		var input struct {
 			Parameters rules.Parameters `json:"parameters"`
 			Revision   int              `json:"revision"`
