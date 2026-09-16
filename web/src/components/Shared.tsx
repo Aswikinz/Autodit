@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { X, ArrowUpRight, LoaderCircle } from "lucide-react";
 import { label } from "../lib/client";
 
@@ -116,32 +116,6 @@ export function Drawer({
   );
 }
 
-export function Help({
-  title,
-  children,
-}: {
-  title: string;
-  children: ReactNode;
-}) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="help-guide">
-      <button
-        type="button"
-        className="button"
-        aria-expanded={open}
-        onClick={() => setOpen(!open)}
-      >
-        Help: {title}
-      </button>
-      {open && (
-        <section className="notice" aria-label={`${title} guide`}>
-          {children}
-        </section>
-      )}
-    </div>
-  );
-}
 export function Metric({
   label: caption,
   value,

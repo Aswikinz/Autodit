@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Database,
   Files,
+  FileSpreadsheet,
   LogOut,
   ShieldCheck,
 } from "lucide-react";
@@ -24,7 +25,7 @@ import { Rules } from "./features/rules/Rules";
 import { Assurance } from "./features/assurance/Assurance";
 import { Admin, ChangePassword } from "./features/admin/Admin";
 import { Cases } from "./features/cases/Cases";
-import { PageGuide } from "./components/PageGuide";
+import { AnalyzeData } from "./features/analysis/Analysis";
 import { ErrorBox, Spinner } from "./components/Shared";
 import {
   client,
@@ -42,6 +43,12 @@ const qc = new QueryClient({
   },
 });
 const tabs = [
+  {
+    id: "analysis",
+    name: "Analyze data",
+    icon: FileSpreadsheet,
+    roles: ["auditor", "audit_manager", "implementer", "rule_engineer"],
+  },
   {
     id: "cases",
     name: "Review cases",
@@ -102,7 +109,7 @@ function App() {
       return value;
     },
   });
-  const [active, setActive] = useState("queue");
+  const [active, setActive] = useState("analysis");
   const [token, setToken] = useState("");
   const [username, setUsername] = useState("");
   const [changingPassword, setChangingPassword] = useState(false);
@@ -128,8 +135,12 @@ function App() {
     }
   }
   async function logout() {
-    try { await result(client.POST("/api/logout", {})); }
-    finally { cache.clear(); location.reload(); }
+    try {
+      await result(client.POST("/api/logout", {}));
+    } finally {
+      cache.clear();
+      location.reload();
+    }
   }
   if (q.isPending) return <Spinner />;
   if (q.error)
@@ -170,7 +181,12 @@ function App() {
         <main className="login-form">
           <span className="eyebrow">WELCOME TO AUTODIT</span>
           <h2>Sign in to your workspace</h2>
-          {new URLSearchParams(location.search).has("signin") && <div className="notice">Please sign in again. Your session expired or your account access changed.</div>}
+          {new URLSearchParams(location.search).has("signin") && (
+            <div className="notice">
+              Please sign in again. Your session expired or your account access
+              changed.
+            </div>
+          )}
           <p className="muted">
             Access your audit queue and connected populations.
           </p>
@@ -337,7 +353,6 @@ function App() {
           </div>
         </header>
         <main className="content">
-          {page && <PageGuide page={page} />}
           {changingPassword && (
             <ChangePassword
               onDone={() => {
@@ -347,6 +362,11 @@ function App() {
             />
           )}
           {page === "admin" && <Admin />}
+          {allowed.some((tab) => tab.id === "analysis") && (
+            <div hidden={page !== "analysis"}>
+              <AnalyzeData roles={session.identity.roles} />
+            </div>
+          )}
           {page === "cases" && (
             <Cases
               subject={session.identity.subject}
