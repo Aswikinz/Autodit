@@ -82,6 +82,14 @@ func Allowed(i Identity, operation string) bool {
 	if operation == "workspace.read" {
 		return len(i.Roles) > 0
 	}
+	if operation == "analytics.read" || operation == "analytics.test" || operation == "analytics.write" {
+		for _, role := range i.Roles {
+			if role == "implementer" || role == "rule_engineer" || role == "audit_manager" || (role == "auditor" && operation != "analytics.write") {
+				return true
+			}
+		}
+		return false
+	}
 	if operation == "cases.read" || operation == "cases.write" {
 		for _, r := range i.Roles {
 			if r == "auditor" || r == "audit_manager" || r == "implementer" || r == "rule_engineer" {

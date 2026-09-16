@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { client, result, message, label } from "../../lib/client";
-import { ErrorBox, Help } from "../../components/Shared";
+import { ErrorBox } from "../../components/Shared";
 export type Workflow = {
   name: string;
   steps: { name: string; role: string; different_actor: boolean }[];
@@ -59,30 +59,6 @@ export function WorkflowSettings() {
   return (
     <section className="panel padded">
       <h2>Review and approval workflow</h2>
-      <Help title="Build a review workflow">
-        <ol>
-          <li>
-            Name the workflow and add steps in the order people should complete
-            them.
-          </li>
-          <li>
-            Choose the role responsible for each step. Create accounts with
-            those roles in People and access.
-          </li>
-          <li>
-            Require a different person at approval steps when reviewers must not
-            approve their own work.
-          </li>
-          <li>
-            The last step closes the case as a confirmed issue or a dismissed
-            finding. A step can send work back for corrections.
-          </li>
-          <li>
-            Publish to apply the workflow to future cases. Open cases retain
-            their original version.
-          </li>
-        </ol>
-      </Help>
       {q.error && <ErrorBox>{message(q.error)}</ErrorBox>}
       <label className="field">
         Workflow name

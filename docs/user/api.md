@@ -16,13 +16,13 @@ checksum, original model version and original decision result.
 
 | Role | Permissions |
 |---|---|
-| auditor | Read/dispose exceptions, read runs/rules/assurance, simulate |
-| audit_manager | Auditor rights plus rule/parameter release and source freshness |
-| rule_engineer | Rule authoring, simulation and release; raw bounded graph editor |
-| implementer | Source configuration, profile/import populations, read run metadata |
-| admin | Run/source metadata; no exception disposition privilege |
+| auditor | Read/dispose exceptions, read runs/rules/assurance, preview data and test analyses |
+| audit_manager | Auditor rights plus saved analyses, rule/parameter release and source freshness |
+| rule_engineer | Load data, save analyses and graphs, simulate and release audit rules |
+| implementer | Load data, save analyses, configure sources, import audit populations and read runs |
+| admin | Manage accounts, settings and review workflows; assign operational roles separately |
 
-Roles combine only when deliberately assigned by the identity provider. Demo mode
+Roles combine only when deliberately assigned by an administrator or identity provider. Demo mode
 combines manager/implementer/engineer for local evaluation. The role guard is
 server-side on every endpoint; hidden buttons are not the security boundary.
 
@@ -47,3 +47,35 @@ decimal strings. HTTP 202 means queued, not completed. Always inspect run status
 The JSON schemas currently describe paths and broad object shapes; the detailed
 population contract is in `extraction-contract.md`. Service-account bearer auth,
 webhooks and external GRC adapters are not supplied in this release.
+
+## Custom analyses
+
+`POST /api/analyses/preview` accepts `{format,name,data,sheet}`. Formats are
+`csv`, `json` (a flat array of objects), or `xlsx` (base64 workbook bytes).
+An Excel request without a sheet returns `{sheets:[...]}`. With a sheet selected,
+the result is `{name,origin,columns:[{name,type}],rows:[{...}],row_count}`.
+Raw cell text is retained. Types are `string`, `number` or `boolean` and are
+applied when testing; invalid values appear as row errors.
+
+`POST /api/analyses/connection` uses the database connection contract to test
+access and discover tables. A preview request with
+`{format:"database",name,connection,table:{schema,name}}` loads the selected
+table. It rejects tables exceeding the dataset limits instead of silently
+running a sample. Credentials are request-scoped and are never saved in analyses.
+
+`POST /api/analyses/test` accepts `{dataset,selected_columns,model}` and returns
+`{total,flagged,errors,results,duration_ms}`. Every result contains a 1-based
+`row`, the typed `input`, and `output` or `error`. Retained `trace` values can be
+shown in the graph. Inputs within expressions and functions are nested under
+`data`, for example `data["Invoice amount"]`. A true boolean `flag` in an
+output marks a row as flagged. Tests run in a disposable process with bounded
+time, memory and result size; a failed overall execution does not return a
+misleading partial success.
+
+`POST /api/analyses` saves `{id?,name,revision,dataset,selected_columns,model,origin?}`.
+Use revision 0 for a new analysis. The response includes its ID, new revision,
+save time and author. Each version is immutable; stale saves return 409.
+`GET /api/analyses?page=1` lists 100 latest analyses per page.
+`GET /api/analyses/{id}` returns the latest version; `?revision=1` reads history.
+Tenant isolation and CSRF checks apply to all these endpoints. Custom analysis
+tests do not create reconciled audit runs or managed review cases.

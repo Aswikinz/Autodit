@@ -19,10 +19,10 @@ import (
 // RoleDescriptions is also the permission guide displayed by the admin page.
 var RoleDescriptions = map[string]string{
 	"admin":         "Manage accounts, workspace settings and review workflows. Assign operational roles separately.",
-	"implementer":   "Connect data sources, preview records, map fields and start audit runs.",
-	"rule_engineer": "Edit decision graphs, simulate rules and release rule versions.",
-	"auditor":       "Review findings, add evidence notes and complete assigned review steps.",
-	"audit_manager": "Manage findings, approve case steps, release rules and view assurance reports.",
+	"implementer":   "Connect sources, load data, save analyses and start audit imports.",
+	"rule_engineer": "Load data, save decision graphs, test analyses and release audit rule versions.",
+	"auditor":       "Preview data and test saved analyses. Review findings, add notes and complete assigned review steps. Cannot save analyses.",
+	"audit_manager": "Save analyses, manage findings, approve case steps, release rules and view assurance reports.",
 }
 var usernamePattern = regexp.MustCompile(`^[a-z0-9][a-z0-9._@-]{1,79}$`)
 

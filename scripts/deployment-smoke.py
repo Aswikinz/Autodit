@@ -24,11 +24,9 @@ parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--bundle", type=Path, default=root / "dist/autodit-0.1.0-offline.tar.gz", help="Archive under dist/; relative paths start at the repository root")
 parser.add_argument("--port", type=int, default=8089)
 parser.add_argument("--local", action="store_true", help="Verify administrator login and local accounts")
-parser.add_argument("--browser", action="store_true", help="Run the browser workspace acceptance test (requires --local)")
+parser.add_argument("--browser", action="store_true", help="Run browser acceptance tests for the selected authentication mode")
 parser.add_argument("--use-local-images", action="store_true", help="Use repository deployment files and already built images")
 args = parser.parse_args()
-if args.browser and not args.local:
-    parser.error('--browser requires --local')
 try:
     bundle = confined_path(root / 'dist', root / args.bundle)
 except ValueError:
@@ -171,9 +169,18 @@ with tempfile.TemporaryDirectory(prefix="autodit-deployment-") as temporary:
         if len(request("/api/runs")) != 2 or request("/api/exceptions")["total"] != 4:
             raise RuntimeError("Inbox receipt did not survive a worker restart")
         if args.browser:
-            test_env = {**os.environ, "AUTODIT_TEST_URL": origin, "AUTODIT_TEST_PASSWORD": browser_password, "AUTODIT_TEST_DB_PASSWORD": (secret_dir / "autodit_app_password").read_text()}
+            test_env = {**os.environ, "AUTODIT_TEST_URL": origin, "AUTODIT_TEST_DB_PASSWORD": (secret_dir / "autodit_app_password").read_text()}
+            if args.local:
+                test_env["AUTODIT_TEST_PASSWORD"] = browser_password
+                test_env.pop("AUTODIT_TEST_TOKEN", None)
+            else:
+                test_env["AUTODIT_TEST_TOKEN"] = (secret_dir / "autodit_demo_token").read_text()
+                test_env.pop("AUTODIT_TEST_PASSWORD", None)
             npm = shutil.which("npm.cmd") or shutil.which("npm")
-            subprocess.run([npm, "run", "test:e2e", "--", "admin.spec.ts"], cwd=root / "web", env=test_env, check=True)
+            browser_tests = [npm, "run", "test:e2e"]
+            if not args.local:
+                browser_tests += ["--", "workspace.spec.ts"]
+            subprocess.run(browser_tests, cwd=root / "web", env=test_env, check=True)
         print("Clean-deployment smoke passed: fresh database, native secrets, golden findings, verified replay and automatic inbox restart deduplication.")
     finally:
         subprocess.run([podman, *compose, "down", "-v"], env=environment, check=False)

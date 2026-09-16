@@ -1,6 +1,6 @@
 # Third-party components
 
-Autodit is Apache-2.0. Unmodified dependencies retain their own licences.
+Autodit is Apache-2.0. Dependencies retain their own licences.
 Exact application versions are pinned in `go.mod`, `go.sum`, `web/package.json`
 and `web/package-lock.json`. Runtime image versions are in the deployment manifest.
 
@@ -9,6 +9,7 @@ and `web/package-lock.json`. Runtime image versions are in the deployment manife
 | Go | BSD-3-Clause | https://go.dev |
 | ZEN / zen-go 2.0.1 | MIT | https://github.com/gorules/zen-go |
 | JDM Editor 1.52.0 | MIT | https://github.com/gorules/jdm-editor |
+| Monaco Editor 0.52.2 and Monaco React 4.7.0 | MIT | Package manifests / upstream repositories |
 | PostgreSQL | PostgreSQL | https://www.postgresql.org/about/licence/ |
 | pgx | MIT | https://github.com/jackc/pgx |
 | shopspring/decimal | MIT | https://github.com/shopspring/decimal |
@@ -26,6 +27,12 @@ Transitive notices remain in their package/source distributions. The JDM editor
 depends on ExcelJS; its UUID dependency is overridden to 11.1.1 to address the
 published buffer-bounds advisory. No commercial GoRules BRMS component is used.
 No AGPL service is bundled in this evaluation stack.
+
+The web build adapts three change callbacks in JDM Editor 1.52.0 so closing
+the editor cannot discard a pending Function or Decision table edit. The
+version-checked adapter is in `web/src/lib/jdmTransform.ts`; dependency upgrades
+must review it. Monaco, its workers and the expression WebAssembly module are
+bundled locally for offline use.
 
 The Caddy build applies dependency fixes for `golang.org/x/text` (0.41.0),
 gRPC (1.83.2), compression (1.18.7) and OpenTelemetry (1.44.0). Its source version remains 2.11.4;

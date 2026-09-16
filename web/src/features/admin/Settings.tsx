@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { client, result, message, type Parameters } from "../../lib/client";
-import { ErrorBox, Help } from "../../components/Shared";
+import { ErrorBox } from "../../components/Shared";
 type Settings = {
   name: string;
   timezone: string;
@@ -89,19 +89,6 @@ export function SettingsPanel() {
   return (
     <section className="panel padded">
       <h2>Workspace settings</h2>
-      <Help title="Set up policies">
-        <p>
-          Set each transaction currency and its materiality threshold
-          explicitly. The reporting currency labels your workspace; it does not
-          convert amounts or supply an exchange rate. Imports must supply their
-          own reporting amounts and controls.
-        </p>
-        <p>
-          Dates use the selected timezone and locale. The fiscal start month
-          records your reporting convention; every extraction still declares its
-          own period.
-        </p>
-      </Help>
       {workspace.error && <ErrorBox>{message(workspace.error)}</ErrorBox>}
       {policies.error && <ErrorBox>{message(policies.error)}</ErrorBox>}
       {s && (

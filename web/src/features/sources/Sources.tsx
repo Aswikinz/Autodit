@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowRight, FileUp, FlaskConical, Plus, Database } from "lucide-react";
 import { client, result, message, dateTime } from "../../lib/client";
 import type { JSONObject, Source } from "../../lib/client";
-import { Badge, ErrorBox, SectionTitle, Help } from "../../components/Shared";
+import { Badge, ErrorBox, SectionTitle } from "../../components/Shared";
 import { DatabasePreview, TablePreview, type PreviewData } from "./Preview";
 import example from "../../../../test/fixtures/population.json";
 
@@ -428,31 +428,6 @@ export function Sources({ onRun }: { onRun: () => void }) {
         </section>
       </div>
       <DatabasePreview />
-      <Help title="Import files and other sources">
-        <ol>
-          <li>
-            Register a source with a stable identifier and expected delivery
-            interval.
-          </li>
-          <li>
-            Upload CSV, Excel or a population JSON. Inspect the record preview
-            and map source columns to audit fields.
-          </li>
-          <li>
-            Attach an independent control report. Its totals must come from the
-            source system.
-          </li>
-          <li>
-            Select Validate and queue run. The run monitor shows validation,
-            reconciliation and scoring results.
-          </li>
-        </ol>
-        <p>
-          For ERP, API and other sources, land a complete population JSON into
-          the deployment inbox using an atomic rename after writing. The worker
-          picks up completed files and avoids duplicate submissions.
-        </p>
-      </Help>
       <section className="demo-panel">
         <FlaskConical size={26} />
         <div>

@@ -135,6 +135,16 @@ func quotedIdentifier(kind, value string) string {
 	return `"` + strings.ReplaceAll(value, `"`, `""`) + `"`
 }
 func (c Connection) Preview(ctx context.Context, table Table) (Preview, error) {
+	return c.read(ctx, table, 50, true)
+}
+
+// Read imports a complete bounded table; it never represents a truncated preview
+// as a dataset. Credentials remain confined to the request.
+func (c Connection) Read(ctx context.Context, table Table) (Preview, error) {
+	return c.read(ctx, table, 10000, false)
+}
+
+func (c Connection) read(ctx context.Context, table Table, limit int, preview bool) (Preview, error) {
 	var out Preview
 	tables, e := c.Tables(ctx)
 	if e != nil {
@@ -158,9 +168,9 @@ func (c Connection) Preview(ctx context.Context, table Table) (Preview, error) {
 	}
 	defer db.Close()
 	name := quotedIdentifier(c.Kind, table.Schema) + "." + quotedIdentifier(c.Kind, table.Name)
-	query := "select * from " + name + " limit 51"
+	query := "select * from " + name + " limit " + strconv.Itoa(limit+1)
 	if c.Kind == "sqlserver" {
-		query = "select top (51) * from " + name
+		query = "select top (" + strconv.Itoa(limit+1) + ") * from " + name
 	}
 	// Query text comes only from a discovered, quoted identifier and a fixed row limit.
 	rows, e := db.QueryContext(ctx, query)
@@ -176,8 +186,12 @@ func (c Connection) Preview(ctx context.Context, table Table) (Preview, error) {
 		return out, errors.New("preview supports up to 200 columns")
 	}
 	out.Sample = [][]string{}
+	bytesRead := 0
 	for rows.Next() {
-		if len(out.Sample) == 50 {
+		if len(out.Sample) == limit {
+			if !preview {
+				return Preview{}, errors.New("table exceeds 10,000 rows; select a smaller source view")
+			}
 			out.Truncated = true
 			break
 		}
@@ -201,8 +215,12 @@ func (c Connection) Preview(ctx context.Context, table Table) (Preview, error) {
 			default:
 				row[i] = fmt.Sprint(val)
 			}
-			if len(row[i]) > 4096 {
+			if preview && len(row[i]) > 4096 {
 				row[i] = row[i][:4096] + "..."
+			}
+			bytesRead += len(row[i])
+			if bytesRead > 16*1024*1024 {
+				return Preview{}, errors.New("table exceeds 16 MiB; select a smaller source view")
 			}
 		}
 		out.Sample = append(out.Sample, row)

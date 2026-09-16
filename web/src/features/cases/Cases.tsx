@@ -5,7 +5,6 @@ import {
   Badge,
   Drawer,
   ErrorBox,
-  Help,
   SectionTitle,
   Spinner,
 } from "../../components/Shared";
@@ -50,23 +49,6 @@ export function Cases({
         title="Review cases"
         description="Follow each finding through review, remediation and approval."
       />
-      <Help title="Work on a case">
-        <ol>
-          <li>Open a case and inspect the finding evidence.</li>
-          <li>
-            Check the current step and responsible role. Claim unassigned work
-            or ask a manager to assign it.
-          </li>
-          <li>
-            Record your review or remediation note, then complete the step. Send
-            it back when corrections are needed.
-          </li>
-          <li>
-            The final approver confirms the outcome and closes the case.
-            Managers can reopen it with a reason.
-          </li>
-        </ol>
-      </Help>
       <label className="field">
         Show cases
         <select

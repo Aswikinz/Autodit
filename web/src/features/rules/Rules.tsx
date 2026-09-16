@@ -6,7 +6,6 @@ import type { Rule, JSONObject } from "../../lib/client";
 import {
   Badge,
   Drawer,
-  Help,
   ErrorBox,
   SectionTitle,
   Spinner,
@@ -88,10 +87,9 @@ export function Rules({ roles }: { roles: string[] }) {
           ))
         )}
       </div>
-      <div className="notice">
+      <p className="muted">
         Currency thresholds and non-working days are managed in Administration.
-        Ask your administrator to update the audit policy.
-      </div>
+      </p>
       {selected && (
         <RuleEditor
           rule={selected}
@@ -184,31 +182,10 @@ function RuleEditor({
       kicker={`${rule.rule_id} / Versioned authoring`}
       onClose={onClose}
     >
-      <Help title="Configure a rule">
-        <ol>
-          <li>
-            Choose the severity and the team responsible for reviewing a
-            finding.
-          </li>
-          <li>
-            Use the decision graph to inspect the rule flow. Select the decision
-            table to edit its rows. Scroll to zoom and drag the canvas to move
-            around.
-          </li>
-          <li>
-            Select Simulate draft to check matching, non-matching and missing
-            data examples.
-          </li>
-          <li>
-            Review the changes, then release a version. Future runs use it;
-            earlier evidence keeps its original version.
-          </li>
-        </ol>
-      </Help>
-      <div className="notice">
-        Engineering owns the tested population and decimal qualification. This
-        model decides whether to flag, how severe, and who should review.
-      </div>
+      <p className="muted">
+        Set the severity and review team for this built-in audit test. Use
+        Analyze data to create rules for your own columns.
+      </p>
       <label className="toggle">
         <input
           type="checkbox"
@@ -252,6 +229,7 @@ function RuleEditor({
           {raw && (
             <Suspense fallback={<Spinner />}>
               <RawEditor
+                readOnly
                 value={model}
                 onChange={(value) => {
                   setModel(value);

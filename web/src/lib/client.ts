@@ -9,14 +9,36 @@ let csrf = "";
 export function setCSRF(value: string) {
   csrf = value;
 }
+export async function requestJSON<T>(path: string, body?: unknown): Promise<T> {
+  const response = await fetch(path, {
+    method: body === undefined ? "GET" : "POST",
+    credentials: "same-origin",
+    headers:
+      body === undefined
+        ? {}
+        : { "Content-Type": "application/json", "X-CSRF-Token": csrf },
+    body: body === undefined ? null : JSON.stringify(body),
+  });
+  if (response.status === 401 && csrf)
+    window.location.replace("/?signin=again");
+  const value = await response.json();
+  if (!response.ok)
+    throw new Error(value.error || `Request failed (${response.status})`);
+  return value as T;
+}
 client.use({
   onRequest({ request }) {
     if (request.method !== "GET") request.headers.set("X-CSRF-Token", csrf);
     return request;
   },
   onResponse({ request, response }) {
-    if (response.status === 401 && csrf && typeof window !== "undefined" &&
-      !request.url.endsWith("/api/password-login") && !request.url.endsWith("/api/login")) {
+    if (
+      response.status === 401 &&
+      csrf &&
+      typeof window !== "undefined" &&
+      !request.url.endsWith("/api/password-login") &&
+      !request.url.endsWith("/api/login")
+    ) {
       window.location.replace("/?signin=again");
     }
     return response;

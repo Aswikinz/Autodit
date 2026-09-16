@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Aswikinz/Autodit/internal/analysis"
 	"github.com/Aswikinz/Autodit/internal/api"
 	"github.com/Aswikinz/Autodit/internal/auth"
 	"github.com/Aswikinz/Autodit/internal/ingest"
@@ -20,6 +21,9 @@ import (
 )
 
 func main() {
+	if analysis.WorkerMain() {
+		return
+	}
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	if e := run(logger); e != nil {
 		logger.Error("application stopped", "error_code", "startup_or_runtime_failure")

@@ -32,7 +32,20 @@ Only the proxy publishes a port, bound to loopback by default. The API, worker
 and database share an internal network. The API also has an outbound network for source connection tests. Persistent named volumes hold PostgreSQL
 and Parquet snapshots. The services restart with the container runtime.
 
-## First audit
+## Analyze a file
+
+1. Assign an operational role in **Administration**. Implementers, rule engineers
+   and audit managers can save analyses; auditors can preview and test them.
+2. Open **Analyze data** and choose a CSV, Excel or JSON file, or connect a database.
+3. Preview the rows, select the columns and confirm their types.
+4. Add conditions or open the full-screen decision graph. Click **Test rules**.
+5. Inspect flagged rows and errors, export results, and save the analysis to reuse it.
+
+The workspace retains the selected dataset and graph together as versioned analyses.
+See [product capabilities and limits](docs/product-capabilities.md) for supported
+nodes, data limits and the broader GRC roadmap.
+
+## First reconciled audit
 
 1. In **Administration**, configure workspace settings and a materiality threshold for each transaction currency. The fictional example uses USD, which must be configured explicitly before running it.
 2. Create named accounts with the required roles. Publish a review and approval workflow.
@@ -40,7 +53,7 @@ and Parquet snapshots. The services restart with the container runtime.
 4. Open **Run monitor** and wait for `Completed`. A failed tie-out halts the run.
 5. Auditors inspect findings in **Exception queue** and verify their evidence replay. Complete the steps in **Review cases** to reach approval and closure.
 
-The [administration guide](docs/user/administration.md) explains account setup and permissions. The [workflow and sources guide](docs/user/workflows-and-sources.md) covers reviews, database previews and file imports. Every page includes an in-app Help button.
+The [administration guide](docs/user/administration.md) explains account setup and permissions. The [workflow and sources guide](docs/user/workflows-and-sources.md) covers reviews, database previews and file imports.
 
 The example contains fictional data and an explicitly synthetic control report.
 Real extracts require independently produced controls; never derive the control
@@ -48,6 +61,8 @@ totals from the same uploaded file.
 
 ## Implemented
 
+- A guided data-to-rules workspace with column selection, full-screen graphs,
+  row results, CSV export and saved analysis versions.
 - CSV, Excel worksheet and population JSON import, record previews and mapping.
 - PostgreSQL, MySQL and SQL Server connection tests and table previews.
 - Local administrator login, named accounts, readable roles and workspace settings.
@@ -96,6 +111,7 @@ make check       # Go race tests, vet, repository checks and TypeScript producti
 make test-int    # disposable real PostgreSQL, RLS, API, ZEN and Parquet tests
 make test-web    # frontend contract tests
 python scripts/deployment-smoke.py --local --browser --use-local-images # isolated account and workflow acceptance test
+python scripts/deployment-smoke.py --browser --use-local-images # isolated demo audit workflow
 make images     # application and Caddy proxy images
 python scripts/deployment-smoke.py # clean namespace using the offline bundle
 ```

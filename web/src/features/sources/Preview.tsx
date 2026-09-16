@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { client, result, message } from "../../lib/client";
-import { ErrorBox, Help } from "../../components/Shared";
+import { client, result, message, requestJSON } from "../../lib/client";
+import type { Dataset } from "../analysis/model";
+import { ErrorBox } from "../../components/Shared";
 export type PreviewData = {
   columns: string[];
   sample: string[][];
@@ -52,7 +53,13 @@ type Connection = {
   allow_plaintext: boolean;
 };
 type Table = { schema: string; name: string };
-export function DatabasePreview() {
+export function DatabasePreview({
+  onLoadDataset,
+}: {
+  onLoadDataset?: (
+    dataset: Dataset & { name?: string; origin?: string },
+  ) => void;
+} = {}) {
   const [connection, setConnection] = useState<Connection>({
     kind: "postgres",
     host: "",
@@ -81,9 +88,14 @@ export function DatabasePreview() {
     setPreview(undefined);
     setTables(undefined);
     try {
-      const out = await result<{ tables: Table[]; status: string }>(
-        client.POST("/api/sources/connection", { body: connection }),
-      );
+      const out = onLoadDataset
+        ? await requestJSON<{ tables: Table[]; status: string }>(
+            "/api/analyses/connection",
+            connection,
+          )
+        : await result<{ tables: Table[]; status: string }>(
+            client.POST("/api/sources/connection", { body: connection }),
+          );
       setTables(out.tables);
       setStatus(
         `${out.status}. ${out.tables.length} tables or views available (maximum 500).`,
@@ -101,6 +113,18 @@ export function DatabasePreview() {
     setError("");
     setPreview(undefined);
     try {
+      if (onLoadDataset) {
+        const data = await requestJSON<
+          Dataset & { name?: string; origin?: string }
+        >("/api/analyses/preview", {
+          format: "database",
+          name: table.name,
+          connection,
+          table,
+        });
+        onLoadDataset(data);
+        return;
+      }
       setPreview(
         await result<PreviewData>(
           client.POST("/api/sources/preview", { body: { connection, table } }),
@@ -114,31 +138,11 @@ export function DatabasePreview() {
   }
   return (
     <section className="panel padded">
-      <h2>Test a database connection</h2>
-      <Help title="Connect and preview">
-        <ol>
-          <li>
-            Ask your database administrator for an account with read access to
-            the required tables.
-          </li>
-          <li>
-            Enter the host reachable from this deployment, port, database and
-            credentials. TLS certificates are verified by default.
-          </li>
-          <li>
-            Test the connection, select a table or view, then preview its
-            records.
-          </li>
-          <li>
-            For an audit run, export a complete population and an independent
-            control report, then use the import form below.
-          </li>
-        </ol>
-        <p>
-          Credentials stay in this form and are sent only for the requested test
-          or preview. They are not saved. Table previews are read-only samples.
-        </p>
-      </Help>
+      <h2>
+        {onLoadDataset
+          ? "Connect to your database"
+          : "Test a database connection"}
+      </h2>
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -266,7 +270,7 @@ export function DatabasePreview() {
             disabled={busy || selected === ""}
             onClick={() => void read()}
           >
-            Preview table
+            {onLoadDataset ? "Load table" : "Preview table"}
           </button>
         </div>
       )}
