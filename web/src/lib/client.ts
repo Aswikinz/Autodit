@@ -14,6 +14,13 @@ client.use({
     if (request.method !== "GET") request.headers.set("X-CSRF-Token", csrf);
     return request;
   },
+  onResponse({ request, response }) {
+    if (response.status === 401 && csrf && typeof window !== "undefined" &&
+      !request.url.endsWith("/api/password-login") && !request.url.endsWith("/api/login")) {
+      window.location.replace("/?signin=again");
+    }
+    return response;
+  },
 });
 export async function result<T>(
   promise: Promise<{ data?: unknown; error?: unknown; response: Response }>,
@@ -41,7 +48,7 @@ export function configureDisplay(settings: {
 }) {
   displaySettings = settings;
 }
-export function number(value: number) {
+export function formatNumber(value: number) {
   return new Intl.NumberFormat(displaySettings.locale || undefined).format(
     value,
   );

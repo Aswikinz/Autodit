@@ -88,6 +88,7 @@ export function Sources({ onRun }: { onRun: () => void }) {
     setSample(undefined);
     setMapping({});
     setMetadata(undefined);
+    setBusy(true);
     try {
       if (file.name.toLowerCase().endsWith(".xlsx")) {
         if (file.size > 16 * 1024 * 1024)
@@ -157,6 +158,8 @@ export function Sources({ onRun }: { onRun: () => void }) {
       }
     } catch (e) {
       setError(message(e));
+    } finally {
+      setBusy(false);
     }
   }
   async function readSheet(value: string) {
@@ -325,6 +328,7 @@ export function Sources({ onRun }: { onRun: () => void }) {
               CSV or JSON: 32 MB maximum. Excel (.xlsx): 16 MB maximum.
             </span>
             <input
+              disabled={busy}
               aria-label="Choose extract file"
               type="file"
               accept=".csv,.json,.xlsx"

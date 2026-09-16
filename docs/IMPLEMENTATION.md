@@ -25,14 +25,33 @@ AP-02 approval-limit breaches. Candidate joins are engineering-owned SQL;
 financial boundary checks use exact decimals before ZEN evaluates the enriched
 row. This is documented in [ADR 0002](adr/0002-exact-qualification-and-local-snapshots.md).
 
+## Workspace extension (2026-09-16)
+
+- Full-screen decision authoring, guided business fields and embedded page help.
+- Local administrator bootstrap, required initial password change, named accounts,
+  role descriptions, account disabling, session revocation and last-admin protection.
+- Administrator-managed reporting currency, explicit transaction-currency thresholds,
+  timezone, display locale, fiscal year and non-working days.
+- Database discovery and sample previews, Excel worksheet selection, CSV and JSON previews.
+- Versioned review workflows, assignments, send-back, separate approval, closure,
+  reopening and durable case history. Legacy dispositions cannot bypass managed cases.
+- PostgreSQL integration tests cover account lifecycle, permissions, workspace policy,
+  worksheet parsing, connector previews and workflow enforcement. The fresh-install
+  Chromium test also passes account creation, first-login password change, currency
+  setup, workflow publication, PostgreSQL and Excel previews, a full-width graph,
+  rejection of self-approval and closure by a separate approver.
+- PostgreSQL connections were exercised against a live server. MySQL and SQL Server
+  driver configuration is tested; live-server acceptance for those engines remains
+  an environment-specific validation step.
+
 ## Measured verification
 
 - Go race-enabled unit and real PostgreSQL integration tests pass. The golden
   population produces exactly four expected findings. Negative tests cover
   failed reconciliation, RLS, immutable evidence, conflicting edits, replay,
   suppression expiry/source change, disabled-rule scope and fiscal-period drift.
-- Backend coverage: **85.2% overall**; domain 99.1%, exceptions 100%, rules 93.9%,
-  analytics 87.2%, ingestion 89.4%, API 90.7%, storage 78.3%, platform 88.6%.
+- Backend coverage after the workspace extension: **85.5% overall**; domain 99.1%, exceptions 100%, rules 93.9%,
+  analytics 87.2%, ingestion 84.1%, API 94.6%, storage 79.2%, platform 85.7%.
   All configured coverage floors pass.
 - OIDC tests use a TLS identity provider and signed RSA ID tokens, exercise
   PKCE exchange, and reject tenant mismatch and reused login state.
@@ -61,8 +80,9 @@ Linux development container and its Python/npm commands ran on the host.
 
 ## Remaining blueprint work and capacity limits
 
-- Database/REST extractors and their credential onboarding are not implemented.
-  Automatic ingestion currently consumes complete JSON files in the inbox.
+- Database connection tests and table previews support PostgreSQL, MySQL and SQL Server.
+  Preview credentials are request scoped. Scheduled database/REST extraction and saved
+  connector credentials remain outstanding; automatic ingestion consumes complete JSON files in the inbox.
 - dbt and DuckDB are not included. PostgreSQL performs candidate SQL and typed
   transforms. S3 is not included; use the persistent filesystem/NAS option.
 - Invoice, vendor, employee and access-grant tables exist, but their ingestion

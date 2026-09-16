@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { client, result, message, label } from "../../lib/client";
+import { formatNumber, client, result, message, label } from "../../lib/client";
 import type { Rule } from "../../lib/client";
 import {
   ErrorBox,
@@ -48,7 +48,7 @@ export function Assurance() {
             />
             <Metric
               label="Records tested"
-              value={data.tested_records.toLocaleString()}
+              value={formatNumber(data.tested_records)}
               note="Cumulative; includes repeat runs"
             />
             <Metric

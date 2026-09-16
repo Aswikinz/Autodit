@@ -21,6 +21,7 @@ const blank: User = {
   revision: 0,
 };
 export function Admin() {
+  const [section,setSection]=useState("people");
   const cache = useQueryClient();
   const q = useQuery({
     queryKey: ["users"],
@@ -59,6 +60,8 @@ export function Admin() {
         title="Administration"
         description="Manage access and the settings used throughout your workspace."
       />
+      <nav className="section-tabs" aria-label="Administration sections">{[["people","Users"],["settings","Workspace settings"],["workflow","Review workflow"]].map(([id,title])=><button type="button" key={id} className={section===id?"button primary":"button"} aria-pressed={section===id} onClick={()=>setSection(id!)}>{title}</button>)}</nav>
+      <div hidden={section!=="people"}>
       <Help title="Manage users">
         <ol>
           <li>Create a named account for each colleague.</li>
@@ -228,8 +231,9 @@ export function Admin() {
           {notice}
         </div>
       )}
-      <SettingsPanel />
-      <WorkflowSettings />
+      </div>
+      <div hidden={section!=="settings"}><SettingsPanel /></div>
+      <div hidden={section!=="workflow"}><WorkflowSettings /></div>
     </>
   );
 }
