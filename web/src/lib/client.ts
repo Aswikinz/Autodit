@@ -112,6 +112,7 @@ export type Observation = {
   created_at: string;
 };
 export type Detail = {
+  has_review_case?: boolean;
   exception: ExceptionRow;
   observations: Observation[];
   events: {

@@ -1433,3 +1433,32 @@ hr {
 .panel + .panel {
   margin-top: 24px;
 }
+
+.workflow-steps {
+  padding-left: 24px;
+}
+.workflow-steps li {
+  padding: 18px;
+  margin-bottom: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.workflow-timeline {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.workflow-timeline li {
+  padding: 12px;
+  border-left: 3px solid var(--line);
+}
+.workflow-timeline li.current {
+  border-color: var(--green);
+  background: #f0f7ef;
+}
+.workflow-timeline span {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+}

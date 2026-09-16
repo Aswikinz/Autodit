@@ -311,6 +311,9 @@ func (t *Tenant) observe(ctx context.Context, tx pgx.Tx, runID string, p domain.
 			return "", err
 		}
 	}
+	if err = t.syncCase(ctx, tx, key, state); err != nil {
+		return "", err
+	}
 	return key, nil
 }
 
