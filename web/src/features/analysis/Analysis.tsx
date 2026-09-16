@@ -35,6 +35,7 @@ import {
   isFlagged,
   makeModel,
   operators,
+  resultSummary,
   sameGraphLogic,
   simpleConditions,
   type Analysis,
@@ -436,6 +437,7 @@ export function AnalyzeData({ roles }: { roles: string[] }) {
         {steps.map((label, index) => (
           <button
             key={label}
+            aria-label={label}
             aria-current={step === index ? "step" : undefined}
             disabled={
               !!busy ||
@@ -1030,7 +1032,7 @@ export function AnalyzeData({ roles }: { roles: string[] }) {
                     {columns.map((c) => (
                       <td key={c.name}>{cell(row.input[c.name])}</td>
                     ))}
-                    <td>{row.error || cell(row.output)}</td>
+                    <td>{row.error || resultSummary(row.output)}</td>
                     <td>
                       <button
                         className="text-button"

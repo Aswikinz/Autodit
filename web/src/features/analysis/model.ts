@@ -262,6 +262,21 @@ export function cell(value: unknown): string {
   return typeof value === "object" ? JSON.stringify(value) : String(value);
 }
 
+export function resultSummary(value: unknown): string {
+  if (Array.isArray(value)) return value.map(resultSummary).join("; ");
+  if (value && typeof value === "object") {
+    return Object.entries(value)
+      .filter(([key]) => key !== "flag")
+      .map(([key, item]) =>
+        key === "reason"
+          ? cell(item)
+          : `${key.replaceAll("_", " ")}: ${cell(item)}`,
+      )
+      .join("; ");
+  }
+  return cell(value);
+}
+
 export function downloadResults(
   name: string,
   columns: Column[],
