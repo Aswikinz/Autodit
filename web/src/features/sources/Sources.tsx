@@ -3,7 +3,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowRight, FileUp, FlaskConical, Plus, Database } from "lucide-react";
 import { client, result, message, dateTime } from "../../lib/client";
 import type { JSONObject, Source } from "../../lib/client";
-import { Badge, ErrorBox, SectionTitle } from "../../components/Shared";
+import { Badge, ErrorBox, SectionTitle, Help } from "../../components/Shared";
+import { DatabasePreview, TablePreview, type PreviewData } from "./Preview";
 import example from "../../../../test/fixtures/population.json";
 
 const fields = [
@@ -33,6 +34,10 @@ export function Sources({ onRun }: { onRun: () => void }) {
   const [name, setName] = useState("Finance file extract");
   const [interval, setInterval] = useState(1440);
   const [csv, setCSV] = useState("");
+  const [workbook, setWorkbook] = useState("");
+  const [sheets, setSheets] = useState<string[]>([]);
+  const [sheet, setSheet] = useState("");
+  const [sample, setSample] = useState<PreviewData>();
   const [fileName, setFileName] = useState("");
   const [population, setPopulation] = useState<JSONObject>();
   const [metadata, setMetadata] = useState<JSONObject>();
@@ -77,7 +82,30 @@ export function Sources({ onRun }: { onRun: () => void }) {
     setPopulation(undefined);
     setCSV("");
     setProfile(undefined);
+    setWorkbook("");
+    setSheets([]);
+    setSheet("");
+    setSample(undefined);
+    setMapping({});
+    setMetadata(undefined);
     try {
+      if (file.name.toLowerCase().endsWith(".xlsx")) {
+        if (file.size > 16 * 1024 * 1024)
+          throw new Error("Excel workbooks must be 16 MB or smaller.");
+        const data = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () =>
+            resolve(String(reader.result).split(",")[1] ?? "");
+          reader.onerror = () => reject(new Error("File could not be read"));
+          reader.readAsDataURL(file);
+        });
+        const out = await result<{ sheets: string[] }>(
+          client.POST("/api/sources/workbook", { body: { data, sheet: "" } }),
+        );
+        setWorkbook(data);
+        setSheets(out.sheets);
+        return;
+      }
       const text = await file.text();
       if (file.name.toLowerCase().endsWith(".json")) {
         const parsed: unknown = JSON.parse(text);
@@ -90,6 +118,23 @@ export function Sources({ onRun }: { onRun: () => void }) {
             "Choose a population JSON file with records and independent controls.",
           );
         setPopulation(parsed as JSONObject);
+        if (Array.isArray(parsed.records)) {
+          const records = parsed.records.slice(0, 50) as Record<
+            string,
+            unknown
+          >[];
+          const columns = Array.from(new Set(records.flatMap(Object.keys)));
+          setSample({
+            columns,
+            sample: records.map((row) =>
+              columns.map((c) =>
+                typeof row[c] === "object"
+                  ? JSON.stringify(row[c])
+                  : String(row[c] ?? ""),
+              ),
+            ),
+          });
+        }
         if ("source_id" in parsed) setSource(String(parsed.source_id));
       } else {
         setCSV(text);
@@ -97,8 +142,10 @@ export function Sources({ onRun }: { onRun: () => void }) {
           columns: string[];
           rows: number;
           nulls: Record<string, number>;
+          sample: string[][];
         }>(client.POST("/api/sources/profile", { body: { csv: text } }));
         setProfile(p);
+        setSample(p);
         setMapping(
           Object.fromEntries(
             fields.map((field) => [
@@ -111,6 +158,40 @@ export function Sources({ onRun }: { onRun: () => void }) {
     } catch (e) {
       setError(message(e));
     }
+  }
+  async function readSheet(value: string) {
+    setSheet(value);
+    setCSV("");
+    setProfile(undefined);
+    setSample(undefined);
+    setMapping({});
+    if (!value) return;
+    await action(async () => {
+      const out = await result<{
+        csv: string;
+        profile: {
+          columns: string[];
+          rows: number;
+          nulls: Record<string, number>;
+          sample: string[][];
+        };
+      }>(
+        client.POST("/api/sources/workbook", {
+          body: { data: workbook, sheet: value },
+        }),
+      );
+      setCSV(out.csv);
+      setProfile(out.profile);
+      setSample(out.profile);
+      setMapping(
+        Object.fromEntries(
+          fields.map((field) => [
+            field,
+            out.profile.columns.find((c) => c.toLowerCase() === field) ?? "",
+          ]),
+        ),
+      );
+    });
   }
   async function readControls(file: File | undefined) {
     if (!file) return;
@@ -233,21 +314,43 @@ export function Sources({ onRun }: { onRun: () => void }) {
             <h2>Import a full population</h2>
           </div>
           <p className="muted">
-            Upload a CSV plus an independent control report, or a population
-            JSON containing both. Each import covers one complete source and
-            fiscal period.
+            Upload a CSV or Excel worksheet plus an independent control report,
+            or a population JSON containing both. Each import covers one
+            complete source and fiscal period.
           </p>
           <label className="upload">
             <FileUp size={30} />
             <strong>{fileName || "Choose an extract"}</strong>
-            <span>CSV or JSON · maximum 32 MB</span>
+            <span>
+              CSV or JSON: 32 MB maximum. Excel (.xlsx): 16 MB maximum.
+            </span>
             <input
               aria-label="Choose extract file"
               type="file"
-              accept=".csv,.json"
+              accept=".csv,.json,.xlsx"
               onChange={(e) => void readFile(e.target.files?.[0])}
             />
           </label>
+          {sheets.length > 0 && (
+            <label className="field">
+              Worksheet
+              <select
+                value={sheet}
+                disabled={busy}
+                onChange={(e) => void readSheet(e.target.value)}
+              >
+                <option value="">Choose a worksheet</option>
+                {sheets.map((s) => (
+                  <option key={s}>{s}</option>
+                ))}
+              </select>
+              <small>
+                The first row must contain unique headers. Dates must use
+                YYYY-MM-DD. Formula values use the workbook's saved results.
+              </small>
+            </label>
+          )}
+          {sample && <TablePreview data={sample} />}
           {csv && (
             <>
               <label className="field">
@@ -320,6 +423,32 @@ export function Sources({ onRun }: { onRun: () => void }) {
           </div>
         </section>
       </div>
+      <DatabasePreview />
+      <Help title="Import files and other sources">
+        <ol>
+          <li>
+            Register a source with a stable identifier and expected delivery
+            interval.
+          </li>
+          <li>
+            Upload CSV, Excel or a population JSON. Inspect the record preview
+            and map source columns to audit fields.
+          </li>
+          <li>
+            Attach an independent control report. Its totals must come from the
+            source system.
+          </li>
+          <li>
+            Select Validate and queue run. The run monitor shows validation,
+            reconciliation and scoring results.
+          </li>
+        </ol>
+        <p>
+          For ERP, API and other sources, land a complete population JSON into
+          the deployment inbox using an atomic rename after writing. The worker
+          picks up completed files and avoids duplicate submissions.
+        </p>
+      </Help>
       <section className="demo-panel">
         <FlaskConical size={26} />
         <div>

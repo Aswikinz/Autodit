@@ -21,6 +21,7 @@ type SourceConfig struct {
 
 // Schema is a discovered header and bounded profile.
 type Schema struct {
+	Sample  [][]string     `json:"sample"`
 	Columns []string       `json:"columns"`
 	Rows    int            `json:"rows"`
 	Nulls   map[string]int `json:"nulls"`
@@ -90,6 +91,7 @@ func (File) Discover(ctx context.Context, c SourceConfig) (Schema, error) {
 		return Schema{}, e
 	}
 	s := Schema{Columns: rs[0], Rows: len(rs) - 1, Nulls: map[string]int{}}
+	s.Sample = rs[1:min(len(rs), 51)]
 	for _, r := range rs[1:] {
 		for i, v := range r {
 			if v == "" {

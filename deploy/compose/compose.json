@@ -231,7 +231,8 @@
         }
       ],
       "networks": [
-        "audit"
+        "audit",
+        "connectors"
       ],
       "volumes": [
         "snapshots:/data/snapshots"
@@ -373,6 +374,7 @@
     "audit": {
       "internal": true
     },
+    "connectors": {},
     "ingress": {}
   },
   "secrets": {

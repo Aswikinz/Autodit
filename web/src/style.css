@@ -1418,3 +1418,18 @@ hr {
     grid-template-columns: 1fr;
   }
 }
+
+.preview-table {
+  overflow: auto;
+  max-height: 360px;
+  border: 1px solid var(--line);
+  margin-bottom: 24px;
+}
+.preview-table td {
+  min-width: 110px;
+  max-width: 340px;
+  overflow-wrap: anywhere;
+}
+.panel + .panel {
+  margin-top: 24px;
+}

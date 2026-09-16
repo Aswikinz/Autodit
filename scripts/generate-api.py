@@ -10,6 +10,7 @@ schemas = {
 }
 paths = {}
 endpoints = [
+ ('post','/api/sources/connection','Object','Object'),('post','/api/sources/preview','Object','Object'),('post','/api/sources/workbook','Object','Object'),
  ('get','/api/workspace','Object',None),('put','/api/admin/settings',None,'Object'),
  ('post','/api/password-login',None,'Object'),('post','/api/password',None,'Object'),
  ('get','/api/admin/users','Object',None),('post','/api/admin/users',None,'Object'),
