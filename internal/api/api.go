@@ -106,6 +106,7 @@ func (s *Server) Handler() http.Handler {
 	s.adminRoutes(mux)
 	s.connectorRoutes(mux)
 	s.workflowRoutes(mux)
+	s.analysisRoutes(mux)
 	mux.HandleFunc("POST /api/logout", s.Auth.Logout)
 	mux.HandleFunc("GET /auth/login", s.Auth.Login)
 	mux.HandleFunc("GET /auth/callback", s.Auth.Callback)
