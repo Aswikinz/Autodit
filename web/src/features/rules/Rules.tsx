@@ -1,8 +1,8 @@
 import { lazy, Suspense, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, Play, ShieldCheck, SlidersHorizontal } from "lucide-react";
+import { ArrowRight, Play, ShieldCheck } from "lucide-react";
 import { client, result, message, dateTime } from "../../lib/client";
-import type { Rule, Parameters, JSONObject } from "../../lib/client";
+import type { Rule, JSONObject } from "../../lib/client";
 import {
   Badge,
   Drawer,
@@ -13,75 +13,6 @@ import {
 } from "../../components/Shared";
 
 const RawEditor = lazy(() => import("./RawEditor"));
-function CurrencyPolicies({
-  parameters,
-  disabled,
-  onChange,
-}: {
-  parameters: Parameters;
-  disabled: boolean;
-  onChange: (p: Parameters) => void;
-}) {
-  const [currency, setCurrency] = useState("");
-  return (
-    <div className="currency-policies">
-      <h3>Additional transaction currencies</h3>
-      <p className="small muted">
-        A run using an unconfigured currency halts before scoring.
-      </p>
-      <div className="parameter-grid">
-        {Object.entries(parameters.currency_thresholds ?? {}).map(
-          ([code, threshold]) => (
-            <label className="field" key={code}>
-              {code} materiality
-              <input
-                disabled={disabled}
-                value={threshold}
-                onChange={(e) =>
-                  onChange({
-                    ...parameters,
-                    currency_thresholds: {
-                      ...parameters.currency_thresholds,
-                      [code]: e.target.value,
-                    },
-                  })
-                }
-              />
-            </label>
-          ),
-        )}
-      </div>
-      <div className="actions">
-        <input
-          aria-label="Additional currency code"
-          placeholder="EUR"
-          maxLength={3}
-          value={currency}
-          disabled={disabled}
-          onChange={(e) => setCurrency(e.target.value.toUpperCase())}
-        />
-        <button
-          className="button"
-          disabled={
-            disabled || !/^[A-Z]{3}$/.test(currency) || currency === "USD"
-          }
-          onClick={() => {
-            onChange({
-              ...parameters,
-              currency_thresholds: {
-                ...parameters.currency_thresholds,
-                [currency]: "1000.0000",
-              },
-            });
-            setCurrency("");
-          }}
-        >
-          Add currency policy
-        </button>
-      </div>
-    </div>
-  );
-}
 type Graph = {
   nodes: {
     id: string;
@@ -98,47 +29,13 @@ function decisionRows(model: JSONObject) {
 }
 export function Rules({ roles }: { roles: string[] }) {
   const [selected, setSelected] = useState<Rule>();
-  const cache = useQueryClient();
   const catalog = useQuery({
     queryKey: ["rules"],
     queryFn: () => result<Rule[]>(client.GET("/api/rules")),
   });
-  const settings = useQuery({
-    queryKey: ["parameters"],
-    queryFn: () =>
-      result<{ parameters: Parameters; revision: number; hash: string }>(
-        client.GET("/api/parameters"),
-      ),
-  });
-  const [draft, setDraft] = useState<Parameters>();
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
-  const [busy, setBusy] = useState(false);
   const canRelease = roles.some((r) =>
     ["audit_manager", "rule_engineer"].includes(r),
   );
-  const parameters = draft ?? settings.data?.parameters;
-  async function save() {
-    if (!parameters || !settings.data) return;
-    setBusy(true);
-    setError("");
-    try {
-      await result(
-        client.PUT("/api/parameters", {
-          body: { parameters, revision: settings.data.revision },
-        }),
-      );
-      setDraft(undefined);
-      setNotice(
-        "Parameters released. New runs use this version; historical evidence is unchanged.",
-      );
-      await cache.invalidateQueries({ queryKey: ["parameters"] });
-    } catch (e) {
-      setError(message(e));
-    } finally {
-      setBusy(false);
-    }
-  }
   return (
     <>
       <SectionTitle
@@ -191,98 +88,10 @@ export function Rules({ roles }: { roles: string[] }) {
           ))
         )}
       </div>
-      <section className="panel padded">
-        <div className="panel-title">
-          <SlidersHorizontal size={20} />
-          <div>
-            <h2>Tenant policy inputs</h2>
-            <p className="muted">
-              Changes apply to future runs and are stored as immutable parameter
-              sets.
-            </p>
-          </div>
-        </div>
-        {parameters && (
-          <>
-            <div className="parameter-grid">
-              <label className="field">
-                USD materiality (transaction currency)
-                <input
-                  value={parameters.materiality}
-                  disabled={!canRelease}
-                  onChange={(e) =>
-                    setDraft({ ...parameters, materiality: e.target.value })
-                  }
-                />
-                <small>
-                  Exact decimal threshold; qualifying values include the
-                  boundary.
-                </small>
-              </label>
-              <label className="field">
-                Maximum exceptions per test
-                <input
-                  type="number"
-                  min={1}
-                  max={100000}
-                  value={parameters.exception_ceiling}
-                  disabled={!canRelease}
-                  onChange={(e) =>
-                    setDraft({
-                      ...parameters,
-                      exception_ceiling: Number(e.target.value),
-                    })
-                  }
-                />
-                <small>
-                  The whole run halts if a rule exceeds this ceiling.
-                </small>
-              </label>
-            </div>
-            <CurrencyPolicies
-              parameters={parameters}
-              disabled={!canRelease}
-              onChange={setDraft}
-            />
-            <fieldset className="days">
-              <legend>Non-working days</legend>
-              {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(
-                (day, i) => (
-                  <label key={day}>
-                    <input
-                      type="checkbox"
-                      checked={parameters.weekend_days.includes(i)}
-                      disabled={!canRelease}
-                      onChange={(e) =>
-                        setDraft({
-                          ...parameters,
-                          weekend_days: e.target.checked
-                            ? [...parameters.weekend_days, i].sort((a, b) => a - b)
-                            : parameters.weekend_days.filter((d) => d !== i),
-                        })
-                      }
-                    />
-                    {day}
-                  </label>
-                ),
-              )}
-            </fieldset>
-            <button
-              className="button primary"
-              disabled={!canRelease || busy || !draft}
-              onClick={() => void save()}
-            >
-              Release parameters <ShieldCheck size={16} />
-            </button>
-          </>
-        )}
-        {error && <ErrorBox>{error}</ErrorBox>}
-        {notice && (
-          <div className="notice" role="status">
-            {notice}
-          </div>
-        )}
-      </section>
+      <div className="notice">
+        Currency thresholds and non-working days are managed in Administration.
+        Ask your administrator to update the audit policy.
+      </div>
       {selected && (
         <RuleEditor
           rule={selected}
@@ -377,10 +186,23 @@ function RuleEditor({
     >
       <Help title="Configure a rule">
         <ol>
-          <li>Choose the severity and the team responsible for reviewing a finding.</li>
-          <li>Use the decision graph to inspect the rule flow. Select the decision table to edit its rows. Scroll to zoom and drag the canvas to move around.</li>
-          <li>Select Simulate draft to check matching, non-matching and missing data examples.</li>
-          <li>Review the changes, then release a version. Future runs use it; earlier evidence keeps its original version.</li>
+          <li>
+            Choose the severity and the team responsible for reviewing a
+            finding.
+          </li>
+          <li>
+            Use the decision graph to inspect the rule flow. Select the decision
+            table to edit its rows. Scroll to zoom and drag the canvas to move
+            around.
+          </li>
+          <li>
+            Select Simulate draft to check matching, non-matching and missing
+            data examples.
+          </li>
+          <li>
+            Review the changes, then release a version. Future runs use it;
+            earlier evidence keeps its original version.
+          </li>
         </ol>
       </Help>
       <div className="notice">

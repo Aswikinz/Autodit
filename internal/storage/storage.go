@@ -144,6 +144,18 @@ func Migrate(ctx context.Context, url string) error {
 
 // Bootstrap initializes an isolated tenant and immutable shipped rule versions.
 func (s *Store) Bootstrap(ctx context.Context, id, name string, models []rules.Model) error {
+	return s.bootstrap(ctx, id, name, models, rules.Defaults())
+}
+
+// BootstrapLocal starts with no currency policy. An administrator must configure it.
+func (s *Store) BootstrapLocal(ctx context.Context, id, name string, models []rules.Model) error {
+	p := rules.Defaults()
+	p.ExplicitCurrencies = true
+	p.Materiality = "0"
+	p.CurrencyThresholds = map[string]string{}
+	return s.bootstrap(ctx, id, name, models, p)
+}
+func (s *Store) bootstrap(ctx context.Context, id, name string, models []rules.Model, parameters rules.Parameters) error {
 	t, e := s.ForTenant(id)
 	if e != nil {
 		return e
@@ -152,7 +164,7 @@ func (s *Store) Bootstrap(ctx context.Context, id, name string, models []rules.M
 		if _, e := tx.Exec(ctx, "insert into tenant(id,name) values($1,$2) on conflict do nothing", id, name); e != nil {
 			return e
 		}
-		params, _ := json.Marshal(rules.Defaults())
+		params, _ := json.Marshal(parameters)
 		hash := domain.Hash(params)
 		if _, e := tx.Exec(ctx, "insert into parameter_set(tenant_id,hash,content) values($1,$2,$3) on conflict do nothing", id, hash, params); e != nil {
 			return e

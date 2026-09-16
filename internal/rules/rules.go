@@ -16,6 +16,7 @@ const EngineVersion = "zen-go/2.0.1"
 
 // Parameters are tenant inputs shared by all versions of the shipped models.
 type Parameters struct {
+	ExplicitCurrencies bool              `json:"explicit_currencies,omitempty"`
 	Materiality        string            `json:"materiality"`
 	CurrencyThresholds map[string]string `json:"currency_thresholds,omitempty"`
 	WeekendDays        []int             `json:"weekend_days"`
@@ -52,13 +53,12 @@ func (p Parameters) Validate() error {
 	return nil
 }
 
-// MaterialityFor requires an explicit transaction-currency policy. USD uses
-// the primary threshold; other currencies must be configured individually.
+// MaterialityFor supports old immutable evidence; new releases require explicit currencies.
 func (p Parameters) MaterialityFor(currency string) (string, error) {
 	if v, ok := p.CurrencyThresholds[currency]; ok {
 		return v, nil
 	}
-	if currency == "USD" {
+	if !p.ExplicitCurrencies && currency == "USD" {
 		return p.Materiality, nil
 	}
 	return "", domain.ErrInvalid

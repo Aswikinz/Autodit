@@ -1366,8 +1366,55 @@ hr {
   }
 }
 
-.drawer.workbench { width: 100vw; max-width: none; }
-.workbench .drawer-body { flex: 1; min-height: 0; }
-.workbench .graph-editor { height: calc(100dvh - 180px); min-height: 480px; width: 100%; }
-.help-guide { margin-bottom: 18px; }
-.help-guide li { margin: 8px 0; line-height: 1.6; }
+.drawer.workbench {
+  width: 100vw;
+  max-width: none;
+}
+.workbench .drawer-body {
+  flex: 1;
+  min-height: 0;
+}
+.workbench .graph-editor {
+  height: calc(100dvh - 180px);
+  min-height: 480px;
+  width: 100%;
+}
+.help-guide {
+  margin-bottom: 18px;
+}
+.help-guide li {
+  margin: 8px 0;
+  line-height: 1.6;
+}
+
+.admin-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+.role-option {
+  display: flex;
+  gap: 12px;
+  margin: 16px 0;
+  align-items: flex-start;
+}
+.role-option small {
+  display: block;
+  margin-top: 5px;
+  line-height: 1.5;
+}
+.password-gate {
+  max-width: 600px;
+  margin: 10vh auto;
+  padding: 24px;
+}
+.password-form {
+  max-width: 600px;
+  margin-bottom: 24px;
+}
+@media (max-width: 1100px) {
+  .admin-grid {
+    grid-template-columns: 1fr;
+  }
+}

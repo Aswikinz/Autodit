@@ -9,7 +9,7 @@ import (
 )
 
 // Config is populated only from environment and mounted secret files.
-type Config struct{ DatabaseURL, TenantID, TenantName, Listen, PublicURL, AuthMode, DemoToken, Rulepack, SnapshotDir, Issuer, ClientID, ClientSecret string }
+type Config struct{ DatabaseURL, TenantID, TenantName, Listen, PublicURL, AuthMode, DemoToken, AdminPassword, Rulepack, SnapshotDir, Issuer, ClientID, ClientSecret string }
 
 func value(key, fallback string) string {
 	if v := os.Getenv(key); v != "" {
@@ -58,6 +58,10 @@ func Load() (Config, error) {
 	if e != nil {
 		return c, e
 	}
+	c.AdminPassword, e = secret("AUTODIT_ADMIN_PASSWORD")
+	if e != nil {
+		return c, e
+	}
 	return c, nil
 }
 
@@ -68,6 +72,10 @@ func (c Config) ValidateAPI() error {
 		return errors.New("public URL must be an origin")
 	}
 	switch c.AuthMode {
+	case "local":
+		if u.Scheme != "https" && u.Hostname() != "localhost" && u.Hostname() != "127.0.0.1" {
+			return errors.New("local accounts require HTTPS outside loopback")
+		}
 	case "demo":
 		if len(c.DemoToken) < 32 {
 			return errors.New("demo token must contain at least 32 characters")

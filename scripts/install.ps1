@@ -20,7 +20,7 @@ if (Test-Path -LiteralPath '.env') {
 $secretDir=Join-Path $root 'secrets'
 New-Item -ItemType Directory -Force -Path $secretDir | Out-Null
 New-Item -ItemType Directory -Force -Path (Join-Path $root 'inbox') | Out-Null
-foreach ($name in @('db_password','app_password','demo_token','oidc_secret')) {
+foreach ($name in @('db_password','app_password','demo_token','oidc_secret','admin_password')) {
   $file=Join-Path $secretDir $name
   if (-not (Test-Path -LiteralPath $file)) {
     $bytes=New-Object byte[] 36
@@ -32,7 +32,7 @@ foreach ($name in @('db_password','app_password','demo_token','oidc_secret')) {
 $account=[Security.Principal.WindowsIdentity]::GetCurrent().Name
 & icacls.exe $secretDir /inheritance:r /grant:r "${account}:(OI)(CI)F" | Out-Null
 if ($LASTEXITCODE -ne 0) { throw 'Could not restrict secret directory permissions.' }
-foreach ($name in @('db_password','app_password','demo_token','oidc_secret')) {
+foreach ($name in @('db_password','app_password','demo_token','oidc_secret','admin_password')) {
   & $podman secret exists "autodit_$name"
   if ($LASTEXITCODE -ne 0) { Run-Podman secret create "autodit_$name" (Join-Path $secretDir $name) }
 }
@@ -53,4 +53,4 @@ $ready=$false
 for($attempt=0;$attempt -lt 60;$attempt++) { try { $r=Invoke-RestMethod "http://localhost:$port/healthz" -TimeoutSec 3; if($r.status -eq 'ok') {$ready=$true;break} } catch {}; Start-Sleep -Seconds 2 }
 if(-not $ready){throw 'Health verification timed out. Check podman compose logs.'}
 Write-Host "Autodit is ready at $publicURL"
-Write-Host "Access token file: $secretDir\demo_token"
+Write-Host "Default username: admin. Initial password file: $secretDir\admin_password"

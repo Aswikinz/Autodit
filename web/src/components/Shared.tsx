@@ -75,11 +75,24 @@ export function Drawer({
         onKeyDown={(e) => {
           if (e.key === "Escape") onClose();
           if (e.key === "Tab") {
-            const items = Array.from(dialog.current?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], [tabindex="0"]') ?? []).filter(el => el.getClientRects().length);
+            const items = Array.from(
+              dialog.current?.querySelectorAll<HTMLElement>(
+                'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], [tabindex="0"]',
+              ) ?? [],
+            ).filter((el) => el.getClientRects().length);
             const first = items[0];
             const last = items.at(-1);
-            if (e.shiftKey && (document.activeElement === first || document.activeElement === dialog.current)) { e.preventDefault(); last?.focus(); }
-            else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first?.focus(); }
+            if (
+              e.shiftKey &&
+              (document.activeElement === first ||
+                document.activeElement === dialog.current)
+            ) {
+              e.preventDefault();
+              last?.focus();
+            } else if (!e.shiftKey && document.activeElement === last) {
+              e.preventDefault();
+              first?.focus();
+            }
           }
         }}
         tabIndex={-1}
@@ -103,12 +116,31 @@ export function Drawer({
   );
 }
 
-export function Help({ title, children }: { title: string; children: ReactNode }) {
+export function Help({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
   const [open, setOpen] = useState(false);
-  return <div className="help-guide">
-    <button type="button" className="button" aria-expanded={open} onClick={() => setOpen(!open)}>Help: {title}</button>
-    {open && <section className="notice" aria-label={`${title} guide`}>{children}</section>}
-  </div>;
+  return (
+    <div className="help-guide">
+      <button
+        type="button"
+        className="button"
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+      >
+        Help: {title}
+      </button>
+      {open && (
+        <section className="notice" aria-label={`${title} guide`}>
+          {children}
+        </section>
+      )}
+    </div>
+  );
 }
 export function Metric({
   label: caption,

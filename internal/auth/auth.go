@@ -14,16 +14,19 @@ import (
 	"time"
 
 	"github.com/Aswikinz/Autodit/internal/platform"
+	"github.com/Aswikinz/Autodit/internal/storage"
 	"github.com/coreos/go-oidc/v3/oidc"
 	"golang.org/x/oauth2"
 )
 
 // Identity binds a verified subject to a tenant and role set.
 type Identity struct {
-	Subject  string   `json:"subject"`
-	TenantID string   `json:"tenant_id"`
-	Roles    []string `json:"roles"`
-	CSRF     string   `json:"csrf_token"`
+	Subject       string   `json:"subject"`
+	TenantID      string   `json:"tenant_id"`
+	Roles         []string `json:"roles"`
+	CSRF          string   `json:"csrf_token"`
+	MustChange    bool     `json:"must_change_password"`
+	LocalRevision int      `json:"-"`
 }
 type session struct {
 	identity Identity
@@ -43,6 +46,8 @@ type Manager struct {
 	oauth    oauth2.Config
 	verifier *oidc.IDTokenVerifier
 	Now      func() time.Time
+	Users    *storage.Tenant
+	attempts map[string]attempt
 }
 
 // New discovers the explicitly configured identity provider.
@@ -71,7 +76,29 @@ func token() string {
 
 // Allowed maps explicit operations to roles; no admin bypass exists.
 func Allowed(i Identity, operation string) bool {
-	roles := map[string][]string{"exceptions.read": {"auditor", "audit_manager"}, "exceptions.write": {"auditor", "audit_manager"}, "runs.read": {"auditor", "audit_manager", "implementer", "admin"}, "runs.write": {"implementer"}, "sources.read": {"implementer", "audit_manager", "admin"}, "sources.write": {"implementer"}, "rules.read": {"auditor", "audit_manager", "rule_engineer"}, "rules.simulate": {"auditor", "audit_manager", "rule_engineer"}, "rules.write": {"audit_manager", "rule_engineer"}, "assurance.read": {"auditor", "audit_manager"}}
+	if i.MustChange {
+		return false
+	}
+	if operation == "workspace.read" {
+		return len(i.Roles) > 0
+	}
+	if operation == "parameters.read" {
+		for _, r := range i.Roles {
+			if r == "admin" || r == "auditor" || r == "audit_manager" || r == "rule_engineer" {
+				return true
+			}
+		}
+		return false
+	}
+	if operation == "admin.write" || operation == "admin.read" {
+		for _, r := range i.Roles {
+			if r == "admin" {
+				return true
+			}
+		}
+		return false
+	}
+	roles := map[string][]string{"exceptions.read": {"auditor", "audit_manager"}, "exceptions.write": {"auditor", "audit_manager"}, "runs.read": {"auditor", "audit_manager", "implementer", "admin"}, "runs.write": {"implementer"}, "sources.read": {"implementer", "audit_manager", "admin"}, "sources.write": {"implementer"}, "rules.read": {"auditor", "audit_manager", "rule_engineer"}, "rules.simulate": {"auditor", "audit_manager", "rule_engineer"}, "rules.write": {"admin", "audit_manager", "rule_engineer"}, "assurance.read": {"auditor", "audit_manager"}}
 	for _, have := range i.Roles {
 		for _, want := range roles[operation] {
 			if have == want {
@@ -89,11 +116,23 @@ func (m *Manager) Current(r *http.Request) (Identity, bool) {
 		return Identity{}, false
 	}
 	m.mu.Lock()
-	defer m.mu.Unlock()
 	s, ok := m.sessions[cookie.Value]
 	if !ok || !s.expires.After(m.Now()) {
 		delete(m.sessions, cookie.Value)
+		m.mu.Unlock()
 		return Identity{}, false
+	}
+	m.mu.Unlock()
+	if s.identity.LocalRevision > 0 {
+		if m.Users == nil {
+			return Identity{}, false
+		}
+		u, e := m.Users.User(r.Context(), s.identity.Subject)
+		if e != nil || !u.Enabled || u.Revision != s.identity.LocalRevision {
+			return Identity{}, false
+		}
+		s.identity.Roles = u.Roles
+		s.identity.MustChange = u.MustChange
 	}
 	return s.identity, true
 }
@@ -108,7 +147,7 @@ func (m *Manager) cookie(w http.ResponseWriter, name, value string, maxAge int) 
 	origin, err := url.Parse(m.cfg.PublicURL)
 	// The explicit local-only evaluation mode supports HTTP clients. OIDC and
 	// every HTTPS deployment always retain Secure, regardless of request headers.
-	if err == nil && m.cfg.AuthMode == "demo" && origin.Scheme == "http" && (origin.Hostname() == "localhost" || origin.Hostname() == "127.0.0.1") {
+	if err == nil && (m.cfg.AuthMode == "demo" || m.cfg.AuthMode == "local") && origin.Scheme == "http" && (origin.Hostname() == "localhost" || origin.Hostname() == "127.0.0.1") {
 		cookie.Secure = false
 	}
 	http.SetCookie(w, cookie)

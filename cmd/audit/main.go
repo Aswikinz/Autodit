@@ -62,7 +62,22 @@ func run(logger *slog.Logger) error {
 		if e != nil {
 			return e
 		}
-		return store.Bootstrap(ctx, cfg.TenantID, cfg.TenantName, models)
+		if cfg.AuthMode == "local" {
+			e = store.BootstrapLocal(ctx, cfg.TenantID, cfg.TenantName, models)
+		} else {
+			e = store.Bootstrap(ctx, cfg.TenantID, cfg.TenantName, models)
+		}
+		if e != nil {
+			return e
+		}
+		if cfg.AuthMode == "local" {
+			tenant, e := store.ForTenant(cfg.TenantID)
+			if e != nil {
+				return e
+			}
+			return tenant.BootstrapAdmin(ctx, cfg.AdminPassword)
+		}
+		return nil
 	case "worker":
 		tenant, e := store.ForTenant(cfg.TenantID)
 		if e != nil {
