@@ -33,13 +33,13 @@ export function Cases({
   roles: string[];
 }) {
   const [status, setStatus] = useState("active");
-  const [page,setPage]=useState(1);
+  const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<string>();
   const q = useQuery({
-    queryKey: ["cases", status,page],
+    queryKey: ["cases", status, page],
     queryFn: () =>
       result<Case[]>(
-        client.GET("/api/cases", { params: { query: { status,page } } }),
+        client.GET("/api/cases", { params: { query: { status, page } } }),
       ),
     refetchInterval: 10000,
   });
@@ -72,7 +72,8 @@ export function Cases({
         <select
           value={status}
           onChange={(e) => {
-            setStatus(e.target.value);setPage(1);
+            setStatus(e.target.value);
+            setPage(1);
             setSelected(undefined);
           }}
         >
@@ -126,7 +127,28 @@ export function Cases({
               ))}
             </tbody>
           </table>
-          <div className="actions"><button className="button" disabled={page===1} onClick={()=>{setPage(page-1);setSelected(undefined)}}>Previous page</button><button className="button" disabled={q.data.length<50} onClick={()=>{setPage(page+1);setSelected(undefined)}}>Next page</button></div>
+          <div className="actions">
+            <button
+              className="button"
+              disabled={page === 1}
+              onClick={() => {
+                setPage(page - 1);
+                setSelected(undefined);
+              }}
+            >
+              Previous page
+            </button>
+            <button
+              className="button"
+              disabled={q.data.length < 50}
+              onClick={() => {
+                setPage(page + 1);
+                setSelected(undefined);
+              }}
+            >
+              Next page
+            </button>
+          </div>
           {!q.data.length && (
             <p>
               No {status} cases. An administrator can publish a workflow to

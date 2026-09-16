@@ -3,7 +3,9 @@ package ingest
 import (
 	"context"
 	"github.com/xuri/excelize/v2"
+	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -54,7 +56,13 @@ func TestDatabasePreviewIntegration(t *testing.T) {
 	if os.Getenv("TEST_DATABASE_URL") == "" {
 		t.Skip("integration database required")
 	}
-	c := Connection{Kind: "postgres", Host: "autodit-test-postgres", Port: 5432, Database: "autodit", Username: "autodit_app", AllowPlaintext: true}
+	databaseURL, _ := url.Parse(os.Getenv("TEST_DATABASE_URL"))
+	port, _ := strconv.Atoi(databaseURL.Port())
+	if port == 0 {
+		port = 5432
+	}
+	password, _ := databaseURL.User.Password()
+	c := Connection{Kind: "postgres", Host: databaseURL.Hostname(), Port: port, Database: strings.TrimPrefix(databaseURL.Path, "/"), Username: databaseURL.User.Username(), Password: password, AllowPlaintext: true}
 	tables, e := c.Tables(context.Background())
 	if e != nil {
 		t.Fatal(e)

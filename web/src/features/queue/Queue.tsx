@@ -13,7 +13,14 @@ import {
   Search,
   ShieldCheck,
 } from "lucide-react";
-import { client, result, message, dateTime, label } from "../../lib/client";
+import {
+  formatNumber,
+  client,
+  result,
+  message,
+  dateTime,
+  label,
+} from "../../lib/client";
 import type {
   QueuePage,
   ExceptionRow,
@@ -253,7 +260,7 @@ export function Queue({ onImport }: { onImport: () => void }) {
             ))}
           </div>
           <span className="small muted">
-            {total.toLocaleString()} matching exceptions
+            {formatNumber(total)} matching exceptions
           </span>
         </div>
         <div className="filters">

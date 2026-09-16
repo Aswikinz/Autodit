@@ -23,12 +23,17 @@ root = Path(__file__).resolve().parent.parent
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--bundle", type=Path, default=root / "dist/autodit-0.1.0-offline.tar.gz", help="Archive under dist/; relative paths start at the repository root")
 parser.add_argument("--port", type=int, default=8089)
+parser.add_argument("--local", action="store_true", help="Verify administrator login and local accounts")
+parser.add_argument("--browser", action="store_true", help="Run the browser workspace acceptance test (requires --local)")
+parser.add_argument("--use-local-images", action="store_true", help="Use repository deployment files and already built images")
 args = parser.parse_args()
+if args.browser and not args.local:
+    parser.error('--browser requires --local')
 try:
     bundle = confined_path(root / 'dist', root / args.bundle)
 except ValueError:
     parser.error('--bundle must remain inside dist/')
-if not bundle.name.endswith('.tar.gz') or not bundle.is_file():
+if not args.use_local_images and (not bundle.name.endswith('.tar.gz') or not bundle.is_file()):
     parser.error('--bundle must name an existing .tar.gz archive inside dist/')
 podman = shutil.which("podman") or r"C:\Program Files\RedHat\Podman\podman.exe"
 project = "autodit_smoke_" + uuid.uuid4().hex[:10]
@@ -40,19 +45,23 @@ def run(*command, **kwargs):
 
 with tempfile.TemporaryDirectory(prefix="autodit-deployment-") as temporary:
     workspace = Path(temporary)
-    with tarfile.open(bundle) as archive:
-        archive.extractall(workspace, filter="data")
-    stage = workspace / "autodit"
-    for line in (stage / "checksums.txt").read_text().splitlines():
-        expected, name = line.split("  ", 1)
-        file = (stage / name).resolve()
-        if not file.is_relative_to(stage.resolve()):
-            raise RuntimeError("Bundle checksum path escapes directory")
-        with file.open("rb") as source:
-            if hashlib.file_digest(source, "sha256").hexdigest() != expected:
-                raise RuntimeError("Bundle checksum mismatch")
-    for image in sorted((stage / "dist/images").glob("*.tar")):
-        run("load", "-i", str(image), stdout=subprocess.DEVNULL)
+    if args.use_local_images:
+        stage = workspace / "autodit"
+        shutil.copytree(root / "deploy", stage / "deploy")
+    else:
+        with tarfile.open(bundle) as archive:
+            archive.extractall(workspace, filter="data")
+        stage = workspace / "autodit"
+        for line in (stage / "checksums.txt").read_text().splitlines():
+            expected, name = line.split("  ", 1)
+            file = (stage / name).resolve()
+            if not file.is_relative_to(stage.resolve()):
+                raise RuntimeError("Bundle checksum path escapes directory")
+            with file.open("rb") as source:
+                if hashlib.file_digest(source, "sha256").hexdigest() != expected:
+                    raise RuntimeError("Bundle checksum mismatch")
+        for image in sorted((stage / "dist/images").glob("*.tar")):
+            run("load", "-i", str(image), stdout=subprocess.DEVNULL)
 
     # Only resource names, port and public origin differ from the verified bundle.
     compose_path = stage / "deploy/compose/compose.json"
@@ -65,7 +74,7 @@ with tempfile.TemporaryDirectory(prefix="autodit-deployment-") as temporary:
         for secret in service.get("secrets", []):
             secret["source"] = secret_names[secret["source"]]
     compose_path.write_text(json.dumps(configuration, indent=2))
-    (stage / ".env").write_text(f"AUTODIT_VERSION=0.1.0\nAUTODIT_PORT={args.port}\nAUTODIT_PUBLIC_URL={origin}\nAUTODIT_AUTH_MODE=demo\n")
+    (stage / ".env").write_text(f"AUTODIT_VERSION=0.1.0\nAUTODIT_PORT={args.port}\nAUTODIT_PUBLIC_URL={origin}\nAUTODIT_AUTH_MODE={'local' if args.local else 'demo'}\n")
     (stage / "inbox").mkdir(mode=0o755)
     secret_dir = stage / "secrets"
     secret_dir.mkdir(mode=0o700)
@@ -86,9 +95,9 @@ with tempfile.TemporaryDirectory(prefix="autodit-deployment-") as temporary:
         client = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
         csrf = ""
 
-        def request(path, body=None):
+        def request(path, body=None, method=None):
             data = None if body is None else json.dumps(body).encode()
-            req = urllib.request.Request(origin + path, data=data, headers={"Content-Type": "application/json", "Origin": origin, "X-CSRF-Token": csrf})
+            req = urllib.request.Request(origin + path, data=data, headers={"Content-Type": "application/json", "Origin": origin, "X-CSRF-Token": csrf}, method=method)
             with client.open(req, timeout=5) as response:
                 return {} if response.status == 204 else json.load(response)
 
@@ -101,8 +110,28 @@ with tempfile.TemporaryDirectory(prefix="autodit-deployment-") as temporary:
             time.sleep(1)
         else:
             raise RuntimeError("Fresh deployment did not become healthy")
-        request("/api/login", {"token": (secret_dir / "autodit_demo_token").read_text()})
-        csrf = request("/api/session")["identity"]["csrf_token"]
+        browser_password = secrets.token_urlsafe(24)
+        if args.local:
+            initial = (secret_dir / "autodit_admin_password").read_text()
+            request("/api/password-login", {"username": "admin", "password": initial})
+            session = request("/api/session")
+            assert session["identity"]["must_change_password"]
+            csrf = session["identity"]["csrf_token"]
+            request("/api/password", {"current_password": initial, "new_password": browser_password})
+            request("/api/password-login", {"username": "admin", "password": browser_password})
+            csrf = request("/api/session")["identity"]["csrf_token"]
+            admin = request("/api/admin/users")["users"][0]
+            admin["roles"] = ["admin", "audit_manager", "auditor", "implementer", "rule_engineer"]
+            request("/api/admin/users", admin)
+            request("/api/password-login", {"username": "admin", "password": browser_password})
+            csrf = request("/api/session")["identity"]["csrf_token"]
+            policy = request("/api/parameters")
+            assert policy["parameters"]["explicit_currencies"] and not policy["parameters"].get("currency_thresholds")
+            policy["parameters"]["currency_thresholds"] = {"USD": "1000.0000"}
+            request("/api/parameters", {"parameters": policy["parameters"], "revision": policy["revision"]}, "PUT")
+        else:
+            request("/api/login", {"token": (secret_dir / "autodit_demo_token").read_text()})
+            csrf = request("/api/session")["identity"]["csrf_token"]
         population = json.loads((root / "test/fixtures/population.json").read_text())
         request("/api/sources", {"id": population["source_id"], "name": "Synthetic deployment verification", "interval_minutes": 60, "mapping": {}})
         run_id = request("/api/runs", population)["id"]
@@ -141,7 +170,11 @@ with tempfile.TemporaryDirectory(prefix="autodit-deployment-") as temporary:
         time.sleep(4)
         if len(request("/api/runs")) != 2 or request("/api/exceptions")["total"] != 4:
             raise RuntimeError("Inbox receipt did not survive a worker restart")
-        print("Offline clean-deployment smoke passed: fresh database, native secrets, golden findings, verified replay and automatic inbox restart deduplication.")
+        if args.browser:
+            test_env = {**os.environ, "AUTODIT_TEST_URL": origin, "AUTODIT_TEST_PASSWORD": browser_password, "AUTODIT_TEST_DB_PASSWORD": (secret_dir / "autodit_app_password").read_text()}
+            npm = shutil.which("npm.cmd") or shutil.which("npm")
+            subprocess.run([npm, "run", "test:e2e", "--", "admin.spec.ts"], cwd=root / "web", env=test_env, check=True)
+        print("Clean-deployment smoke passed: fresh database, native secrets, golden findings, verified replay and automatic inbox restart deduplication.")
     finally:
         subprocess.run([podman, *compose, "down", "-v"], env=environment, check=False)
         for name in created_secrets:

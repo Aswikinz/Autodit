@@ -4,6 +4,8 @@ import { readFileSync } from "node:fs";
 test("complete audit workflow persists dispositions, replays evidence and simulates rules", async ({
   page,
 }) => {
+  const session = await (await page.request.get("/api/session")).json();
+  test.skip(session.mode !== "demo", "Legacy token workflow requires an explicit demo deployment. Run the local-account acceptance test through deployment-smoke.py.");
   const fixture = JSON.parse(
     readFileSync("../test/fixtures/population.json", "utf8"),
   ) as Record<string, unknown>;

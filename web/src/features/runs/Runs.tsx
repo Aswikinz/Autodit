@@ -1,7 +1,14 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, CheckCircle2, Clock3 } from "lucide-react";
-import { client, result, dateTime, label, message } from "../../lib/client";
+import {
+  formatNumber,
+  client,
+  result,
+  dateTime,
+  label,
+  message,
+} from "../../lib/client";
 import type { Run, Source } from "../../lib/client";
 import {
   Badge,
@@ -112,10 +119,10 @@ export function Runs({ onImport }: { onImport: () => void }) {
                       <Badge value={r.status} />
                     </td>
                     <td>{label(r.stage)}</td>
-                    <td>{r.record_count.toLocaleString()}</td>
+                    <td>{formatNumber(r.record_count)}</td>
                     <td>
                       {r.status === "completed"
-                        ? r.exception_count.toLocaleString()
+                        ? formatNumber(r.exception_count)
                         : "—"}
                     </td>
                     <td className="muted">{dateTime(r.created_at)}</td>

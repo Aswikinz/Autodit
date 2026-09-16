@@ -13,8 +13,8 @@ python -m pip install podman-compose==1.6.0
 powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1
 ```
 
-Open **http://localhost:8088**. Read the locally generated token from
-`secrets/demo_token` and enter it on the sign-in page. The installer preserves
+Open **http://localhost:8088**. Sign in as **admin** with the locally generated password in
+`secrets/admin_password`. Choose a new password when prompted. The installer preserves
 existing credentials and data when rerun. All credentials are ignored by Git.
 
 ## Start on Linux
@@ -29,16 +29,18 @@ sh scripts/install.sh
 ```
 
 Only the proxy publishes a port, bound to loopback by default. The API, worker
-and database use an internal network. Persistent named volumes hold PostgreSQL
+and database share an internal network. The API also has an outbound network for source connection tests. Persistent named volumes hold PostgreSQL
 and Parquet snapshots. The services restart with the container runtime.
 
 ## First audit
 
-1. Open **Sources & mapping** and select **Run example**, or upload your extract.
-2. Open **Run monitor** and wait for `Completed`. A failed tie-out halts the run.
-3. Open **Exception queue**, inspect a record, and select **Verify replay**.
-4. Enter a reason, start review, then accept, dismiss or suppress with an expiry.
-5. Run the population again. A dismissed exception stays dismissed.
+1. In **Administration**, configure workspace settings and a materiality threshold for each transaction currency. The fictional example uses USD, which must be configured explicitly before running it.
+2. Create named accounts with the required roles. Publish a review and approval workflow.
+3. Sign in with an account that has the Implementer role. Open **Sources & mapping**, preview a database or file, then import a complete population and independent controls.
+4. Open **Run monitor** and wait for `Completed`. A failed tie-out halts the run.
+5. Auditors inspect findings in **Exception queue** and verify their evidence replay. Complete the steps in **Review cases** to reach approval and closure.
+
+The [administration guide](docs/user/administration.md) explains account setup and permissions. The [workflow and sources guide](docs/user/workflows-and-sources.md) covers reviews, database previews and file imports. Every page includes an in-app Help button.
 
 The example contains fictional data and an explicitly synthetic control report.
 Real extracts require independently produced controls; never derive the control
@@ -46,11 +48,15 @@ totals from the same uploaded file.
 
 ## Implemented
 
-- CSV/JSON import, column mapping and profiling; automatic complete-file inbox.
+- CSV, Excel worksheet and population JSON import, record previews and mapping.
+- PostgreSQL, MySQL and SQL Server connection tests and table previews.
+- Local administrator login, named accounts, readable roles and workspace settings.
+- Configurable review, remediation and approval steps with assignment and case history.
+- Automatic complete-file inbox.
 - Explicit fiscal periods, exact decimal amounts and per-currency materiality.
 - Count, amount, debit and credit reconciliation before any test runs.
 - Blocked duplicate-payment, weekend-posting and approval-limit tests.
-- ZEN decision graphs, guided priority/routing edits, simulation and version release.
+- Full-screen ZEN decision graphs, guided priority/routing edits, simulation and version release.
 - Server-side queue search, filtering, sorting and pagination; investigation notes.
 - Stable identities, suppression expiry/change handling and source resolution.
 - Immutable Parquet snapshots, append-only observations/events and replay checks.
@@ -60,8 +66,7 @@ totals from the same uploaded file.
 
 This is the **0.1.0 evaluation release**, not the entire five-milestone blueprint.
 See [implementation status](docs/IMPLEMENTATION.md) for exact scope, measured
-checks and remaining enterprise integrations. Use federated OIDC and your own
-TLS ingress before putting real client data on a shared network.
+checks and remaining enterprise integrations. Use HTTPS ingress for shared-network access. Federated OIDC remains available.
 
 ## Move to a new system
 
@@ -90,7 +95,7 @@ tested build environment. Frontend dependencies are pinned in `web/package-lock.
 make check       # Go race tests, vet, repository checks and TypeScript production build
 make test-int    # disposable real PostgreSQL, RLS, API, ZEN and Parquet tests
 make test-web    # frontend contract tests
-make test-e2e    # browser workflow against the local running stack
+python scripts/deployment-smoke.py --local --browser --use-local-images # isolated account and workflow acceptance test
 make images     # application and Caddy proxy images
 python scripts/deployment-smoke.py # clean namespace using the offline bundle
 ```
