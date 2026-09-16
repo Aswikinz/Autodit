@@ -29,6 +29,8 @@ proxy={'image':manifest['proxy_image'],'restart':'unless-stopped','read_only':Tr
 compose={'name':'autodit','services':{'postgres':postgres,'migrate':migrate,'bootstrap':bootstrap,'api':api,'worker':worker,'proxy':proxy},'volumes':{'postgres_data':{},'snapshots':{}},'networks':{'audit':{'internal':True}},'secrets':{name:{'file':'../../secrets/'+name} for name in ['db_password','app_password','demo_token','oidc_secret','admin_password']}}
 # Published ports need a return route on rootless Podman. Only the proxy joins
 # this ingress bridge; financial data services remain on the internal network.
+compose['networks']['connectors']={}
+compose['services']['api']['networks']=['audit','connectors']
 compose['networks']['ingress']={}
 compose['services']['proxy']['networks']=['audit','ingress']
 # Compose's file secrets become bind mounts and ignore mode/uid on several
