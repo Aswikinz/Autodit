@@ -6,6 +6,7 @@ import type { Rule, Parameters, JSONObject } from "../../lib/client";
 import {
   Badge,
   Drawer,
+  Help,
   ErrorBox,
   SectionTitle,
   Spinner,
@@ -369,10 +370,19 @@ function RuleEditor({
   }
   return (
     <Drawer
+      fullscreen
       title={rule.title}
       kicker={`${rule.rule_id} / Versioned authoring`}
       onClose={onClose}
     >
+      <Help title="Configure a rule">
+        <ol>
+          <li>Choose the severity and the team responsible for reviewing a finding.</li>
+          <li>Use the decision graph to inspect the rule flow. Select the decision table to edit its rows. Scroll to zoom and drag the canvas to move around.</li>
+          <li>Select Simulate draft to check matching, non-matching and missing data examples.</li>
+          <li>Review the changes, then release a version. Future runs use it; earlier evidence keeps its original version.</li>
+        </ol>
+      </Help>
       <div className="notice">
         Engineering owns the tested population and decimal qualification. This
         model decides whether to flag, how severe, and who should review.

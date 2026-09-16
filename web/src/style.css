@@ -1365,3 +1365,9 @@ hr {
     animation: none;
   }
 }
+
+.drawer.workbench { width: 100vw; max-width: none; }
+.workbench .drawer-body { flex: 1; min-height: 0; }
+.workbench .graph-editor { height: calc(100dvh - 180px); min-height: 480px; width: 100%; }
+.help-guide { margin-bottom: 18px; }
+.help-guide li { margin: 8px 0; line-height: 1.6; }
