@@ -1,8 +1,11 @@
-.PHONY: check test test-int test-golden build images dev deploy-gen api-gen fmt lint lint-logs cover web test-web test-e2e preflight backup bundle
+.PHONY: check test test-int test-golden build images dev deploy-gen api-gen fmt lint lint-logs cover web test-web test-e2e preflight backup bundle security
 PODMAN ?= podman
 GO ?= go
 
 check: lint test web
+security:
+	$(GO) run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./cmd/... ./internal/...
+	npm audit --prefix web --audit-level=moderate
 test:
 	$(GO) test -race -count=1 ./...
 test-int:

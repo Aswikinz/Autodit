@@ -34,3 +34,20 @@ configure client logging policy before production use.
 - Dependency vulnerability scans are point-in-time checks, not ongoing certification.
 
 Report security issues privately to the repository owner at devgru-azki@pm.me.
+
+## Dependency verification
+
+Run `make security` for the pinned Go vulnerability checker and npm audit.
+The September 2026 hardening update fixes the application's text normalization,
+compression and system dependencies, and the proxy's text, gRPC and
+OpenTelemetry dependencies. The text fix addresses
+[GO-2026-5970](https://pkg.go.dev/vuln/GO-2026-5970).
+Scan release proxy binaries separately with
+`go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 -mode=binary PATH_TO_CADDY`.
+These checks do not replace OS package, native ZEN library or host security review.
+
+On 2026-09-16, the application source scan reported no vulnerabilities and the
+rebuilt Caddy binary scan reported no flagged vulnerable symbols. The proxy
+scanner still lists advisories in dependencies whose vulnerable code is not
+present on its detected call paths; this is not a claim that every transitive
+package is advisory-free. npm audit reported zero known vulnerabilities.

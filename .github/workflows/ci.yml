@@ -28,6 +28,7 @@ jobs:
       - run: make test-int
       - run: python scripts/coverage.py
       - run: npm audit --prefix web --audit-level=moderate
+      - run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./cmd/... ./internal/...
       - uses: actions/upload-artifact@v4
         with:
           name: backend-coverage

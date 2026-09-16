@@ -26,3 +26,8 @@ Transitive notices remain in their package/source distributions. The JDM editor
 depends on ExcelJS; its UUID dependency is overridden to 11.1.1 to address the
 published buffer-bounds advisory. No commercial GoRules BRMS component is used.
 No AGPL service is bundled in this evaluation stack.
+
+The Caddy build applies dependency fixes for `golang.org/x/text` (0.41.0),
+gRPC (1.83.2), compression (1.18.7) and OpenTelemetry (1.44.0). Its source version remains 2.11.4;
+see `Containerfile.proxy` for the reproducible build commands. The application
+also pins patched compression and Go system packages in `go.mod`.
