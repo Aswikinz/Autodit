@@ -9,23 +9,24 @@ env={
  'POSTGRES_PASSWORD_FILE':'/run/secrets/app_password',
  'AUTODIT_TENANT_ID':'${AUTODIT_TENANT_ID:-'+manifest['tenant_id']+'}',
  'AUTODIT_TENANT_NAME':'${AUTODIT_TENANT_NAME:-Audit workspace}',
- 'AUTODIT_AUTH_MODE':'${AUTODIT_AUTH_MODE:-demo}',
+ 'AUTODIT_AUTH_MODE':'${AUTODIT_AUTH_MODE:-local}',
  'AUTODIT_PUBLIC_URL':'${AUTODIT_PUBLIC_URL:-http://localhost:8088}',
+ 'AUTODIT_ADMIN_PASSWORD_FILE':'/run/secrets/admin_password',
  'AUTODIT_DEMO_TOKEN_FILE':'/run/secrets/demo_token',
  'AUTODIT_OIDC_ISSUER':'${AUTODIT_OIDC_ISSUER:-}',
  'AUTODIT_OIDC_CLIENT_ID':'${AUTODIT_OIDC_CLIENT_ID:-}',
  'AUTODIT_OIDC_CLIENT_SECRET_FILE':'/run/secrets/oidc_secret',
 }
 base={'image':manifest['application_image'],'read_only':True,'cap_drop':['ALL'],'security_opt':['no-new-privileges:true'],
- 'tmpfs':['/tmp:rw,noexec,nosuid,size=128m'],'environment':env,'secrets':['app_password','demo_token','oidc_secret'],
+ 'tmpfs':['/tmp:rw,noexec,nosuid,size=128m'],'environment':env,'secrets':['app_password','demo_token','oidc_secret','admin_password'],
  'networks':['audit'],'volumes':['snapshots:/data/snapshots'],'logging':{'driver':'k8s-file','options':{'max-size':'10m'}}}
 api={**base,'command':['api'],'restart':'unless-stopped','healthcheck':{'test':['CMD','audit','healthcheck'],'interval':'10s','timeout':'4s','retries':12},'depends_on':{'postgres':{'condition':'service_healthy'}}}
 worker={**base,'command':['worker'],'restart':'unless-stopped','stop_grace_period':'120s','environment':{**env,'AUTODIT_INBOX_DIR':'/data/inbox'},'volumes':['snapshots:/data/snapshots','../../inbox:/data/inbox:ro'],'depends_on':{'api':{'condition':'service_healthy'}}}
-migrate={**base,'command':['migrate'],'profiles':['setup'],'environment':{**env,'POSTGRES_USER':'autodit_owner','POSTGRES_PASSWORD_FILE':'/run/secrets/db_password'},'secrets':['db_password','app_password','demo_token','oidc_secret'],'depends_on':{'postgres':{'condition':'service_healthy'}}}
+migrate={**base,'command':['migrate'],'profiles':['setup'],'environment':{**env,'POSTGRES_USER':'autodit_owner','POSTGRES_PASSWORD_FILE':'/run/secrets/db_password'},'secrets':['db_password','app_password','demo_token','oidc_secret','admin_password'],'depends_on':{'postgres':{'condition':'service_healthy'}}}
 bootstrap={**base,'command':['bootstrap'],'profiles':['setup'],'depends_on':{'postgres':{'condition':'service_healthy'}}}
 postgres={'image':manifest['postgres_image'],'restart':'unless-stopped','environment':{'POSTGRES_USER':'autodit_owner','POSTGRES_DB':'autodit','POSTGRES_PASSWORD_FILE':'/run/secrets/db_password','POSTGRES_INITDB_ARGS':'--auth-host=scram-sha-256'},'secrets':['db_password','app_password'],'volumes':['postgres_data:/var/lib/postgresql/data','../templates/postgres-init.sh:/docker-entrypoint-initdb.d/10-app.sh:ro'],'networks':['audit'],'healthcheck':{'test':['CMD-SHELL','pg_isready -U autodit_owner -d autodit'],'interval':'3s','timeout':'3s','retries':30},'logging':{'driver':'k8s-file','options':{'max-size':'10m'}}}
 proxy={'image':manifest['proxy_image'],'restart':'unless-stopped','read_only':True,'cap_drop':['ALL'],'security_opt':['no-new-privileges:true'],'tmpfs':['/tmp:rw,noexec,nosuid,size=32m'],'ports':['${AUTODIT_BIND:-127.0.0.1}:${AUTODIT_PORT:-8088}:8080'],'networks':['audit'],'depends_on':{'api':{'condition':'service_healthy'}},'logging':{'driver':'k8s-file','options':{'max-size':'10m'}}}
-compose={'name':'autodit','services':{'postgres':postgres,'migrate':migrate,'bootstrap':bootstrap,'api':api,'worker':worker,'proxy':proxy},'volumes':{'postgres_data':{},'snapshots':{}},'networks':{'audit':{'internal':True}},'secrets':{name:{'file':'../../secrets/'+name} for name in ['db_password','app_password','demo_token','oidc_secret']}}
+compose={'name':'autodit','services':{'postgres':postgres,'migrate':migrate,'bootstrap':bootstrap,'api':api,'worker':worker,'proxy':proxy},'volumes':{'postgres_data':{},'snapshots':{}},'networks':{'audit':{'internal':True}},'secrets':{name:{'file':'../../secrets/'+name} for name in ['db_password','app_password','demo_token','oidc_secret','admin_password']}}
 # Published ports need a return route on rootless Podman. Only the proxy joins
 # this ingress bridge; financial data services remain on the internal network.
 compose['networks']['ingress']={}
@@ -33,7 +34,7 @@ compose['services']['proxy']['networks']=['audit','ingress']
 # Compose's file secrets become bind mounts and ignore mode/uid on several
 # providers. Native Podman secrets remain readable by non-root service users
 # without making the host's secret files world-readable.
-compose['secrets']={'autodit_'+name:{'external':True} for name in ['db_password','app_password','demo_token','oidc_secret']}
+compose['secrets']={'autodit_'+name:{'external':True} for name in ['db_password','app_password','demo_token','oidc_secret','admin_password']}
 for service in compose['services'].values():
  if 'secrets' in service:
   service['secrets']=[{'source':'autodit_'+name,'target':name} for name in service['secrets']]

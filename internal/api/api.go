@@ -88,6 +88,7 @@ func (s *Server) route(operation string, fn endpoint) http.HandlerFunc {
 
 // Handler installs explicit role checks for every application endpoint.
 func (s *Server) Handler() http.Handler {
+	s.Auth.Users, _ = s.Store.ForTenant(s.Auth.TenantID())
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
@@ -100,6 +101,9 @@ func (s *Server) Handler() http.Handler {
 	})
 	mux.HandleFunc("GET /api/session", s.Auth.Session)
 	mux.HandleFunc("POST /api/login", s.Auth.DemoLogin)
+	mux.HandleFunc("POST /api/password-login", s.Auth.PasswordLogin)
+	mux.HandleFunc("POST /api/password", s.Auth.PasswordChange)
+	s.adminRoutes(mux)
 	mux.HandleFunc("POST /api/logout", s.Auth.Logout)
 	mux.HandleFunc("GET /auth/login", s.Auth.Login)
 	mux.HandleFunc("GET /auth/callback", s.Auth.Callback)
@@ -245,7 +249,7 @@ func (s *Server) Handler() http.Handler {
 		}
 		return e
 	}))
-	mux.HandleFunc("GET /api/parameters", s.route("rules.read", func(w http.ResponseWriter, r *http.Request, t *storage.Tenant, _ auth.Identity) error {
+	mux.HandleFunc("GET /api/parameters", s.route("parameters.read", func(w http.ResponseWriter, r *http.Request, t *storage.Tenant, _ auth.Identity) error {
 		out, e := t.Settings(r.Context())
 		if e == nil {
 			write(w, 200, out)

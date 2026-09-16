@@ -20,10 +20,10 @@ if [ -f .env ] && ! grep -qx 'AUTODIT_VERSION=0.1.0' .env; then echo 'Use the up
 umask 077
 mkdir -p secrets inbox
 chmod 755 inbox
-for name in db_password app_password demo_token oidc_secret; do
+for name in db_password app_password demo_token oidc_secret admin_password; do
   if [ ! -f "secrets/$name" ]; then head -c 36 /dev/urandom | base64 > "secrets/$name"; fi
 done
-for name in db_password app_password demo_token oidc_secret; do
+for name in db_password app_password demo_token oidc_secret admin_password; do
   podman secret exists "autodit_$name" || podman secret create "autodit_$name" "secrets/$name"
 done
 [ -f .env ] || cp .env.example .env
@@ -50,4 +50,4 @@ until curl --max-time 3 -fsS "http://localhost:$port/healthz" >/dev/null; do
   attempt=$((attempt+1)); [ "$attempt" -lt 60 ] || { echo 'Health check timed out.'; exit 1; }; sleep 2
 done
 echo "Autodit is ready at $public_url"
-echo 'Access token: read secrets/demo_token (keep it private).'
+echo 'Default username: admin. Read secrets/admin_password for the initial password.'

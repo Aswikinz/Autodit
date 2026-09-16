@@ -34,9 +34,22 @@ export function message(e: unknown) {
     ? e.message
     : "The operation could not be completed.";
 }
+let displaySettings = { locale: "", timezone: "" };
+export function configureDisplay(settings: {
+  locale: string;
+  timezone: string;
+}) {
+  displaySettings = settings;
+}
+export function number(value: number) {
+  return new Intl.NumberFormat(displaySettings.locale || undefined).format(
+    value,
+  );
+}
 export function dateTime(value: string | null | undefined) {
   return value
-    ? new Intl.DateTimeFormat(undefined, {
+    ? new Intl.DateTimeFormat(displaySettings.locale || undefined, {
+        timeZone: displaySettings.timezone || undefined,
         dateStyle: "medium",
         timeStyle: "short",
       }).format(new Date(value))
@@ -55,6 +68,7 @@ export type Session = {
     tenant_id: string;
     roles: string[];
     csrf_token: string;
+    must_change_password?: boolean;
   };
 };
 export type ExceptionRow = {
@@ -153,6 +167,7 @@ export type Rule = {
   released_at: string;
 };
 export type Parameters = {
+  explicit_currencies?: boolean;
   materiality: string;
   currency_thresholds?: Record<string, string>;
   weekend_days: number[];

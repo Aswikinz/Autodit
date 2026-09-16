@@ -22,8 +22,15 @@ import { Runs } from "./features/runs/Runs";
 import { Sources } from "./features/sources/Sources";
 import { Rules } from "./features/rules/Rules";
 import { Assurance } from "./features/assurance/Assurance";
+import { Admin, ChangePassword } from "./features/admin/Admin";
 import { ErrorBox, Spinner } from "./components/Shared";
-import { client, result, message, setCSRF } from "./lib/client";
+import {
+  client,
+  result,
+  message,
+  setCSRF,
+  configureDisplay,
+} from "./lib/client";
 import type { Session } from "./lib/client";
 import "./style.css";
 
@@ -33,6 +40,7 @@ const qc = new QueryClient({
   },
 });
 const tabs = [
+  { id: "admin", name: "Administration", icon: ShieldCheck, roles: ["admin"] },
   {
     id: "queue",
     name: "Exception queue",
@@ -75,15 +83,34 @@ function App() {
     },
     retry: false,
   });
+  const workspace = useQuery({
+    queryKey: ["workspace"],
+    enabled: !!q.data?.authenticated && !q.data?.identity.must_change_password,
+    queryFn: async () => {
+      const value = await result<{
+        settings: { name: string; locale: string; timezone: string };
+      }>(client.GET("/api/workspace"));
+      configureDisplay(value.settings);
+      return value;
+    },
+  });
   const [active, setActive] = useState("queue");
   const [token, setToken] = useState("");
+  const [username, setUsername] = useState("");
+  const [changingPassword, setChangingPassword] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   async function login() {
     setBusy(true);
     setError("");
     try {
-      await result(client.POST("/api/login", { body: { token } }));
+      if (q.data?.mode === "local")
+        await result(
+          client.POST("/api/password-login", {
+            body: { username, password: token },
+          }),
+        );
+      else await result(client.POST("/api/login", { body: { token } }));
       setToken("");
       await cache.invalidateQueries({ queryKey: ["session"] });
     } catch (e) {
@@ -139,19 +166,34 @@ function App() {
           <p className="muted">
             Access your audit queue and connected populations.
           </p>
-          {session.mode === "demo" ? (
+          {session.mode === "demo" || session.mode === "local" ? (
             <form
               onSubmit={(e) => {
                 e.preventDefault();
                 void login();
               }}
             >
-              <div className="notice">
-                Local evaluation mode. Use the access token generated during
-                installation.
-              </div>
+              {session.mode === "demo" && (
+                <div className="notice">
+                  Local evaluation mode. Use the access token generated during
+                  installation.
+                </div>
+              )}
+              {session.mode === "local" && (
+                <label className="field">
+                  Username
+                  <input
+                    required
+                    autoComplete="username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                  />
+                </label>
+              )}
               <label className="field">
-                Workspace access token
+                {session.mode === "local"
+                  ? "Password"
+                  : "Workspace access token"}
                 <input
                   type="password"
                   autoComplete="current-password"
@@ -176,6 +218,21 @@ function App() {
         </main>
       </div>
     );
+  if (session.identity.must_change_password)
+    return (
+      <div className="password-gate">
+        <ChangePassword
+          required
+          onDone={() => {
+            cache.clear();
+            location.reload();
+          }}
+        />
+        <button className="button" onClick={() => void logout()}>
+          Sign out
+        </button>
+      </div>
+    );
   const allowed = tabs.filter((t) =>
     t.roles.some((r) => session.identity.roles.includes(r)),
   );
@@ -193,7 +250,9 @@ function App() {
         <div className="workspace">
           <div className="workspace-avatar">A</div>
           <div>
-            <strong>Audit workspace</strong>
+            <strong>
+              {workspace.data?.settings.name || "Audit workspace"}
+            </strong>
             <small>
               {session.mode === "demo"
                 ? "Local evaluation"
@@ -216,6 +275,14 @@ function App() {
           ))}
         </nav>
         <div className="sidebar-bottom">
+          {session.mode === "local" && (
+            <button
+              className="button"
+              onClick={() => setChangingPassword(!changingPassword)}
+            >
+              Change password
+            </button>
+          )}
           <div className="system-status">
             <span className="status-dot good" /> Evidence retention enabled
           </div>
@@ -232,7 +299,9 @@ function App() {
               <small>
                 {session.mode === "demo"
                   ? "Evaluation access"
-                  : "Federated identity"}
+                  : session.mode === "local"
+                    ? session.identity.roles.join(", ")
+                    : "Federated identity"}
               </small>
             </div>
             <button
@@ -260,7 +329,18 @@ function App() {
           </div>
         </header>
         <main className="content">
-          {page === "queue" && <Queue onImport={() => setActive("sources")} />}{" "}
+          {changingPassword && (
+            <ChangePassword
+              onDone={() => {
+                cache.clear();
+                location.reload();
+              }}
+            />
+          )}
+          {page === "admin" && <Admin />}
+          {page === "queue" && (
+            <Queue onImport={() => setActive("sources")} />
+          )}{" "}
           {page === "runs" && <Runs onImport={() => setActive("sources")} />}{" "}
           {page === "sources" && <Sources onRun={() => setActive("runs")} />}{" "}
           {page === "rules" && <Rules roles={session.identity.roles} />}{" "}

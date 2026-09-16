@@ -10,6 +10,9 @@ schemas = {
 }
 paths = {}
 endpoints = [
+ ('get','/api/workspace','Object',None),('put','/api/admin/settings',None,'Object'),
+ ('post','/api/password-login',None,'Object'),('post','/api/password',None,'Object'),
+ ('get','/api/admin/users','Object',None),('post','/api/admin/users',None,'Object'),
  ('get','/api/session','Session',None),('post','/api/login',None,'Object'),('post','/api/logout',None,None),
  ('get','/api/exceptions','Object',None),('get','/api/exceptions/{key}','Object',None),
  ('post','/api/exceptions/{key}/disposition',None,'Object'),('post','/api/exceptions/{key}/comments',None,'Object'),
