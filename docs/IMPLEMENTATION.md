@@ -7,9 +7,10 @@ Source: both supplied archives, blueprint revision 1.1.
 Verified on 2026-09-15, with dependency hardening and revalidation on 2026-09-16,
 using Podman 5.8.3, podman-compose 1.6.0,
 PostgreSQL 17, Go 1.27.1 and Node 24 on linux/amd64 through Windows Podman
-Machine. The tested machine connection is rootful; application containers run
-as UID 10001. The supplied Linux configuration supports rootless deployment,
-but a separate rootless server acceptance run is still outstanding.
+Machine. Clean deployment was verified with both rootful and rootless Podman
+connections; application containers run as UID 10001. A separate physical Linux
+server and its client-specific identity/storage configuration still require
+acceptance testing before production use.
 
 | Blueprint area | Implemented behavior |
 | --- | --- |
@@ -46,6 +47,7 @@ row. This is documented in [ADR 0002](adr/0002-exact-qualification-and-local-sna
   with pulls disabled, initialized an empty PostgreSQL volume and fresh native
   secrets, produced all four golden findings and replayed evidence successfully.
   Atomic inbox publication and deduplication across worker restart also pass.
+  The final patched images passed on the rootless connection on 2026-09-16.
   This validates a clean namespace on the current machine, not a second host.
 - A restore drill restored **24 observations and six immutable snapshots**
   into an isolated database/volume and verified counts and every snapshot hash.

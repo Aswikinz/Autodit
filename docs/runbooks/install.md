@@ -5,9 +5,10 @@
 Run the platform as a rootless Linux service account, or on Windows using Podman
 Machine. Windows is a development/evaluation target; use Linux for a server.
 Podman 4.4+ and a compatible Compose provider are required. The verified
-workstation uses Podman 5.8.3, podman-compose 1.6.0 and linux/amd64 containers
-through a rootful Podman Machine connection. A separate rootless Linux host
-acceptance test remains required before a production deployment.
+workstation uses Podman 5.8.3, podman-compose 1.6.0 and linux/amd64 containers.
+Both rootful and rootless Podman Machine connections passed clean-deployment
+testing. Verify the client's actual Linux server, identity and storage settings
+before a production deployment.
 
 On Windows, `scripts/install.ps1` locates the standard Podman installation even
 when a terminal has not picked up the new PATH. Install Python 3.10+ for the

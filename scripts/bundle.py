@@ -1,5 +1,6 @@
 """Create a portable offline deployment bundle with images and SHA-256 checksums."""
 import hashlib,json,shutil,subprocess,tarfile,tempfile
+from datetime import datetime, timezone
 from pathlib import Path
 root=Path(__file__).resolve().parent.parent
 podman=shutil.which('podman') or r'C:\Program Files\RedHat\Podman\podman.exe'
@@ -24,6 +25,12 @@ with tempfile.TemporaryDirectory(prefix='autodit-bundle-') as temp:
   subprocess.run([podman,'save','--format','oci-archive','--output',str(images/f'image-{i}.tar'),ref],check=True)
   image_metadata.append({'reference':ref,'id':info['Id'],'digest':info.get('Digest'),'architecture':info['Architecture'],'os':info['Os']})
  (stage/'image-manifest.json').write_text(json.dumps(image_metadata,indent=2)+'\n')
+ try:
+  revision=subprocess.check_output(['git','rev-parse','HEAD'],cwd=root,text=True,stderr=subprocess.DEVNULL).strip()
+  dirty=subprocess.run(['git','diff','--quiet','HEAD'],cwd=root,check=False).returncode!=0
+ except (OSError,subprocess.CalledProcessError):
+  revision=None;dirty=None
+ (stage/'release.json').write_text(json.dumps({'version':version,'created_at':datetime.now(timezone.utc).isoformat(),'source_revision':revision,'tracked_source_modified':dirty,'integrity':'sha256','signed':False},indent=2)+'\n')
  hashes=[]
  for file in sorted(stage.rglob('*')):
   if file.is_file():
