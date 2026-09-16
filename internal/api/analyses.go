@@ -65,6 +65,9 @@ func (s *Server) analysisRoutes(mux *http.ServeMux) {
 		if e := analysis.ValidateModel(in.Model); e != nil {
 			return analysisError(w, e)
 		}
+		if e := analysis.ValidateSyntax(r.Context(), in.Model); e != nil {
+			return analysisError(w, e)
+		}
 		out, e := t.SaveAnalysis(r.Context(), in, i.Subject)
 		if e != nil {
 			return e

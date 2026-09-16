@@ -35,8 +35,9 @@ type Report struct {
 	TracesTruncated bool        `json:"traces_truncated,omitempty"`
 }
 type workRequest struct {
-	Model   json.RawMessage `json:"model"`
-	Dataset Dataset         `json:"dataset"`
+	Model        json.RawMessage `json:"model"`
+	Dataset      Dataset         `json:"dataset"`
+	ValidateOnly bool            `json:"validate_only,omitempty"`
 }
 type workResponse struct {
 	Report Report `json:"report"`
@@ -52,6 +53,21 @@ func Evaluate(ctx context.Context, model []byte, dataset Dataset) (Report, error
 	if err := ValidateDataset(dataset); err != nil {
 		return Report{}, err
 	}
+	return runWorker(ctx, workRequest{Model: model, Dataset: dataset})
+}
+
+// ValidateSyntax parses decision expressions in the same isolated worker used
+// for evaluation. The Go binding has no compile-only expression API, so parsing
+// must never run with application credentials or outside the worker's limits.
+func ValidateSyntax(ctx context.Context, model []byte) error {
+	if err := ValidateModel(model); err != nil {
+		return err
+	}
+	_, err := runWorker(ctx, workRequest{Model: model, ValidateOnly: true})
+	return err
+}
+
+func runWorker(ctx context.Context, request workRequest) (Report, error) {
 	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 	defer cancel()
 	select {
@@ -60,7 +76,7 @@ func Evaluate(ctx context.Context, model []byte, dataset Dataset) (Report, error
 	case <-ctx.Done():
 		return Report{}, ctx.Err()
 	}
-	data, err := json.Marshal(workRequest{Model: model, Dataset: dataset})
+	data, err := json.Marshal(request)
 	if err != nil {
 		return Report{}, err
 	}
@@ -118,6 +134,12 @@ func WorkerMain() bool {
 		dec := json.NewDecoder(io.LimitReader(os.Stdin, MaxBytes+512*1024))
 		if dec.Decode(&request) != nil {
 			response.Error = "invalid analysis request"
+		} else if request.ValidateOnly {
+			if err := ValidateModel(request.Model); err != nil {
+				response.Error = err.Error()
+			} else if err := validateSyntax(request.Model); err != nil {
+				response.Error = err.Error()
+			}
 		} else {
 			report, err := evaluateDirect(context.Background(), request.Model, request.Dataset)
 			response.Report = report
@@ -136,6 +158,9 @@ func evaluateDirect(ctx context.Context, model []byte, d Dataset) (Report, error
 		return Report{}, err
 	}
 	if err := ValidateDataset(d); err != nil {
+		return Report{}, err
+	}
+	if err := validateSyntax(model); err != nil {
 		return Report{}, err
 	}
 	engine := zen.NewEngine(zen.EngineConfig{})

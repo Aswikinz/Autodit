@@ -223,6 +223,69 @@ func TestConditionStringLiterals(t *testing.T) {
 	}
 }
 
+func TestSyntaxPreflightRejectsFalseNegatives(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		change func(map[string]any)
+	}{
+		{"condition", func(c map[string]any) { c["rules"].([]any)[0].(map[string]string)["i"] = "> >" }},
+		{"field", func(c map[string]any) { c["inputs"].([]any)[0].(map[string]string)["field"] = `data["bad"` }},
+		{"empty field", func(c map[string]any) { c["inputs"].([]any)[0].(map[string]string)["field"] = "" }},
+		{"output", func(c map[string]any) { c["rules"].([]any)[0].(map[string]string)["o"] = `"unterminated` }},
+		{"input transform", func(c map[string]any) { c["inputField"] = "data[" }},
+		{"input default", func(c map[string]any) { c["inputs"].([]any)[0].(map[string]string)["defaultValue"] = "[" }},
+		{"output default", func(c map[string]any) { c["outputs"].([]any)[0].(map[string]string)["defaultValue"] = "[" }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			content := tableContent("data.Amount", "first")
+			tc.change(content)
+			model := graph("decisionTableNode", content)
+			if err := validateSyntax(model); err == nil {
+				t.Fatal("invalid expression accepted for saving")
+			}
+			if r, err := Evaluate(context.Background(), model, sample(t)); err == nil {
+				t.Fatalf("invalid expression reported as successful: %+v", r)
+			}
+		})
+	}
+	broken := tableContent("data.Amount", "first")
+	broken["rules"].([]any)[0].(map[string]string)["i"] = "> >"
+	if err := ValidateSyntax(context.Background(), graph("decisionTableNode", broken)); err == nil {
+		t.Fatal("save worker accepted malformed rule")
+	}
+	for _, model := range [][]byte{
+		graph("expressionNode", map[string]any{"expressions": []any{map[string]string{"id": "x", "key": "flag", "value": "data["}}}),
+		graph("expressionNode", map[string]any{"inputField": "data[", "expressions": []any{map[string]string{"id": "x", "key": "flag", "value": "true"}}}),
+	} {
+		if err := ValidateSyntax(context.Background(), model); err == nil {
+			t.Fatal("malformed expression accepted")
+		}
+	}
+	var switchModel map[string]any
+	_ = json.Unmarshal(switchGraph(), &switchModel)
+	switchModel["nodes"].([]any)[1].(map[string]any)["content"].(map[string]any)["statements"].([]any)[0].(map[string]any)["condition"] = "data["
+	b, _ := json.Marshal(switchModel)
+	if err := ValidateSyntax(context.Background(), b); err == nil {
+		t.Fatal("malformed switch accepted")
+	}
+	// Fields that are produced by preceding nodes cannot be evaluated against an
+	// empty sample. Their valid syntax remains accepted until the actual row runs.
+	valid := graph("decisionTableNode", tableContent("data.Amount + 1", "first"))
+	if err := ValidateSyntax(context.Background(), valid); err != nil {
+		t.Fatal("context-dependent expression rejected", err)
+	}
+	if err := ValidateSyntax(context.Background(), []byte(`{}`)); err == nil {
+		t.Fatal("invalid graph accepted")
+	}
+	full := tableContent("data.Amount", "first")
+	full["inputs"] = []any{map[string]any{"id": "i", "field": nil}}
+	full["rules"].([]any)[0].(map[string]string)["i"] = "data.Amount > 100"
+	r, err := evaluateDirect(context.Background(), graph("decisionTableNode", full), sample(t))
+	if err != nil || r.Flagged != 1 {
+		t.Fatal("full expression columns failed", r, err)
+	}
+}
+
 func switchGraph() []byte {
 	var model map[string]any
 	_ = json.Unmarshal(graph("switchNode", map[string]any{"hitPolicy": "first", "statements": []any{map[string]any{"id": "high", "condition": "data.Amount > 100", "isDefault": false}, map[string]any{"id": "low", "condition": "", "isDefault": true}}}), &model)

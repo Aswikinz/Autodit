@@ -144,6 +144,10 @@ func TestAnalysisWorkspaceIntegration(t *testing.T) {
 	request("POST", "/api/analyses/test", map[string]any{"dataset": dataset, "selected_columns": dataset.Columns, "model": map[string]any{}}, 400)
 	request("POST", "/api/analyses/test", map[string]any{"dataset": dataset, "model": model}, 400)
 	request("POST", "/api/analyses/test", map[string]string{"unknown": "field"}, 400)
+	badSyntax := json.RawMessage(`{"nodes":[{"id":"in","type":"inputNode","name":"Request"},{"id":"rule","name":"Bad condition","type":"decisionTableNode","content":{"hitPolicy":"first","inputs":[{"id":"amount","field":"data.amount"}],"outputs":[{"id":"flag","field":"flag"}],"rules":[{"_id":"r1","amount":">>> 10","flag":"true"},{"_id":"r2","amount":"","flag":"false"}]}},{"id":"out","name":"Response","type":"outputNode"}],"edges":[{"id":"a","sourceId":"in","targetId":"rule"},{"id":"b","sourceId":"rule","targetId":"out"}]}`)
+	in.Model = badSyntax
+	request("POST", "/api/analyses", in, 400)
+	request("POST", "/api/analyses/test", map[string]any{"dataset": dataset, "selected_columns": dataset.Columns, "model": badSyntax}, 400)
 	tenant, _ := store.ForTenant(tenantID)
 	cases, e := tenant.Cases(ctx, "active", 1)
 	if e != nil || len(cases) != 0 {
