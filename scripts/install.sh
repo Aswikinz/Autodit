@@ -2,6 +2,7 @@
 set -eu
 cd "$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 mode=${1:-online}
+if [ "$mode" = online ] && [ ! -f Containerfile ] && [ -f checksums.txt ]; then mode=--offline; fi
 command -v podman >/dev/null || { echo 'Podman 4.4+ is required.' >&2; exit 1; }
 podman info >/dev/null
 podman compose version

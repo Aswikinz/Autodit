@@ -2,6 +2,7 @@ param([switch]$Preflight,[switch]$Offline,[switch]$NoBuild)
 $ErrorActionPreference='Stop'
 $root=Split-Path $PSScriptRoot -Parent
 Set-Location -LiteralPath $root
+if (-not $NoBuild -and -not (Test-Path -LiteralPath 'Containerfile') -and (Test-Path -LiteralPath 'checksums.txt')) { $Offline=$true }
 $podman=(Get-Command podman -ErrorAction SilentlyContinue).Source
 if (-not $podman) { $podman='C:\Program Files\RedHat\Podman\podman.exe' }
 if (-not (Test-Path -LiteralPath $podman)) { throw 'Install Podman and start Podman Machine first.' }

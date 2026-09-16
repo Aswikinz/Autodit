@@ -105,6 +105,8 @@ Build `python scripts/bundle.py` on the connected build host. Verify the tarball
 checksum independently after transfer. Extract into an empty deployment
 directory, then run the platform-specific installer with `--offline` / `-Offline`.
 The installer validates file checksums before loading images. Runtime images
+are detected automatically when running the installer from an extracted bundle;
+the explicit offline flag is also supported. Runtime images
 and dependency metadata are included; Podman, its VM and the Compose provider
 are host prerequisites and must be provisioned separately.
 
