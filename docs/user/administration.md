@@ -6,6 +6,6 @@ Open **Administration** to create accounts and assign roles. Each checkbox expla
 
 Set the workspace name, reporting currency, locale, timezone and fiscal start month. Define a materiality threshold for every transaction currency. New local workspaces have no currency policy, so scoring stops until the policy is configured. Currency settings never imply conversion or exchange rates. Existing immutable evidence keeps its original policy.
 
-The rule editor opens across the full browser window. Use its Help button for authoring and release instructions.
+Analyze data guides you from file or database loading to column selection, decision rules and results. The decision graph opens across the full browser window. Saved analyses keep the data and graph together; the shipped audit rules retain their separate simulation and release controls.
 
 Passwords use salted PBKDF2-HMAC-SHA256 with 600,000 iterations, following the [OWASP password storage guidance](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html). Password resets require a change on next login. Account revisions invalidate existing sessions after access changes.

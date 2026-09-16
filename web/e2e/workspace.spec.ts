@@ -5,7 +5,10 @@ test("complete audit workflow persists dispositions, replays evidence and simula
   page,
 }) => {
   const session = await (await page.request.get("/api/session")).json();
-  test.skip(session.mode !== "demo", "Legacy token workflow requires an explicit demo deployment. Run the local-account acceptance test through deployment-smoke.py.");
+  test.skip(
+    session.mode !== "demo",
+    "Legacy token workflow requires an explicit demo deployment. Run the local-account acceptance test through deployment-smoke.py.",
+  );
   const fixture = JSON.parse(
     readFileSync("../test/fixtures/population.json", "utf8"),
   ) as Record<string, unknown>;
@@ -14,13 +17,11 @@ test("complete audit workflow persists dispositions, replays evidence and simula
     await page
       .getByRole("button", { name: "Sources & mapping", exact: true })
       .click();
-    await page
-      .getByLabel("Choose extract file")
-      .setInputFiles({
-        name: "population.json",
-        mimeType: "application/json",
-        buffer: Buffer.from(JSON.stringify(population)),
-      });
+    await page.getByLabel("Choose extract file").setInputFiles({
+      name: "population.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify(population)),
+    });
     await page.getByRole("button", { name: "Validate & queue run" }).click();
     await expect(
       page.getByRole("heading", { name: "Run monitor" }),
@@ -39,10 +40,13 @@ test("complete audit workflow persists dispositions, replays evidence and simula
   };
   const errors: string[] = [];
   const external: string[] = [];
+  const origin = new URL(
+    process.env.AUTODIT_TEST_URL ?? "http://localhost:8088",
+  ).origin;
   page.on("pageerror", (e) => errors.push(e.message));
   page.on("request", (r) => {
     if (
-      !r.url().startsWith("http://localhost:8088") &&
+      !r.url().startsWith(`${origin}/`) &&
       !r.url().startsWith("data:") &&
       !r.url().startsWith("blob:")
     )
@@ -51,10 +55,13 @@ test("complete audit workflow persists dispositions, replays evidence and simula
   await page.goto("/");
   await page
     .getByLabel("Workspace access token")
-    .fill(readFileSync("../secrets/demo_token", "utf8").trim());
+    .fill(
+      process.env.AUTODIT_TEST_TOKEN ??
+        readFileSync("../secrets/demo_token", "utf8").trim(),
+    );
   await page.getByRole("button", { name: "Open workspace" }).click();
   await expect(
-    page.getByRole("heading", { name: "Exception queue" }),
+    page.getByRole("heading", { name: "Analyze data" }),
   ).toBeVisible();
   await importPopulation();
   await openQueue();

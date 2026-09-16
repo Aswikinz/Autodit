@@ -27,7 +27,7 @@ row. This is documented in [ADR 0002](adr/0002-exact-qualification-and-local-sna
 
 ## Workspace extension (2026-09-16)
 
-- Full-screen decision authoring, guided business fields and embedded page help.
+- Full-screen decision viewing and guided business fields for the shipped audit rules.
 - Local administrator bootstrap, required initial password change, named accounts,
   role descriptions, account disabling, session revocation and last-admin protection.
 - Administrator-managed reporting currency, explicit transaction-currency thresholds,
@@ -46,18 +46,34 @@ row. This is documented in [ADR 0002](adr/0002-exact-qualification-and-local-sna
 
 ## Measured verification
 
+The data workspace adds a single load, preview, configure and test flow for
+CSV, Excel, flat JSON and bounded database tables. Selected columns feed a
+full-screen graph with Request, Response, Decision table, Expression, Function
+and Switch nodes. Analyses retain their dataset and graph in immutable versions;
+results can be inspected and exported. App help boxes have been removed.
+
+Graph execution runs in a disposable process with time and memory limits.
+Syntax preflight rejects malformed table conditions before they can appear as
+successful non-matches. The Function editor and its workers are bundled locally.
+
 - Go race-enabled unit and real PostgreSQL integration tests pass. The golden
   population produces exactly four expected findings. Negative tests cover
   failed reconciliation, RLS, immutable evidence, conflicting edits, replay,
   suppression expiry/source change, disabled-rule scope and fiscal-period drift.
-- Backend coverage after the workspace extension: **85.5% overall**; domain 99.1%, exceptions 100%, rules 93.9%,
-  analytics 87.2%, ingestion 84.1%, API 94.6%, storage 79.2%, platform 85.7%.
+- Backend coverage after the data workspace: **86.3% overall**; domain 99.1%, exceptions 100%, rules 93.9%,
+  analytics 87.2%, ingestion 86.4%, API 95.1%, storage 79.7%, platform 85.7%.
   All configured coverage floors pass.
 - OIDC tests use a TLS identity provider and signed RSA ID tokens, exercise
   PKCE exchange, and reject tenant mismatch and reused login state.
-- TypeScript production build, Go vet and repository checks pass. Three
-  frontend contract tests pass. The npm dependency audit reports zero known
+- TypeScript production build, Go vet and repository checks pass. Nine
+  frontend contract and editor integration tests pass. The npm dependency audit reports zero known
   vulnerabilities at verification time.
+- Nine Chromium acceptance tests pass in a fresh local-account deployment,
+  including the eight new analysis flows and the existing administration and
+  review workflow. These exercise CSV, Excel, JSON, full PostgreSQL table loading,
+  column changes, saved analyses, export, permissions, actual WebAssembly readiness
+  and an immediate Function edit followed by close and test. The separate demo
+  workflow uses its own temporary credentials and database.
 - Chromium completes the real deployed workflow: import, wait for completion,
   queue search, replay, dismiss, reimport, verify dismissal survives, simulate
   a rule and open the decision graph and assurance pages. No uncaught browser
@@ -87,9 +103,10 @@ Linux development container and its Python/npm commands ran on the host.
   transforms. S3 is not included; use the persistent filesystem/NAS option.
 - Invoice, vendor, employee and access-grant tables exist, but their ingestion
   and additional ITGC tests are not implemented.
-- No arbitrary new-test authoring: changing populations, joins or graph topology
-  requires engineering work and fixtures. The existing graph editor is bounded
-  by server-side validation.
+- The Analyze data workspace supports custom graphs against imported rows. The
+  reconciled audit pipeline still uses engineering-owned population joins and
+  three shipped audit tests. Custom analysis matches do not create managed cases.
+  See [Product capabilities](product-capabilities.md) for the broader feature comparison.
 - Native Quadlet, Helm/Kubernetes, bundled identity/observability services,
   SIEM/webhooks and external notifications remain outstanding.
 - The input limit is 100,000 records per population with a bounded exception
